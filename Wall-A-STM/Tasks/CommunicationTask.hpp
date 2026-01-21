@@ -9,7 +9,8 @@
 #define COMMUNICATIONTASK_HPP_
 
 #pragma once
-#include "cmsis_os2.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 namespace Tasks {
 class CommunicationTask {
@@ -17,7 +18,7 @@ public:
     static void create();
 private:
     static void threadFunc(void* arg);
-    static osThreadId_t threadId_;
+    static TaskHandle_t threadId_;
 };
 } // namespace Tasks
 

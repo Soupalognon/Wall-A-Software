@@ -21,15 +21,24 @@ namespace App {
 
 void WallAApp::init() {
     Libs::Utils::Logger::init();
+    Libs::Utils::Logger::info("\n\n=== WallAApp initialization starting ===");
+    Libs::Utils::Logger::info("Initializing StateMachine...");
     StateMachine::init();
+    Libs::Utils::Logger::info("StateMachine initialized");
 
     // Create tasks (CMSIS-RTOS v2)
+    Libs::Utils::Logger::info("Creating MotorTask...");
     Tasks::MotorTask::create();
-    Tasks::SensorTask::create();
-    Tasks::ControlTask::create();
-    Tasks::CommunicationTask::create();
+    // Libs::Utils::Logger::info("Creating SensorTask...");
+    // Tasks::SensorTask::create();
+    // Libs::Utils::Logger::info("Creating ControlTask...");
+    // Tasks::ControlTask::create();
+    // Libs::Utils::Logger::info("Creating CommunicationTask...");
+    // Tasks::CommunicationTask::create();
 
-    Libs::Utils::Logger::info("RobotApp initialized");
+    Libs::Utils::Logger::info("=== RobotApp initialization complete ===");
+    Libs::Utils::Logger::info("DefaultTask: finishing - passing control to higher priority tasks");
+    // DefaultTask terminates, allowing higher-priority tasks to run
 }
 
 void WallAApp::shutdown() {

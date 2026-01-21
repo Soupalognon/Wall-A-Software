@@ -9,7 +9,8 @@
 #define MOTORTASK_HPP_
 
 #pragma once
-#include "cmsis_os2.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 namespace Tasks {
 
@@ -19,7 +20,7 @@ public:
     static void start(); // used if you want direct start
 private:
     static void threadFunc(void* arg);
-    static osThreadId_t threadId_;
+    static TaskHandle_t threadId_;
 };
 
 } // namespace Tasks

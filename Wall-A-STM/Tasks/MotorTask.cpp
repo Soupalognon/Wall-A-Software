@@ -11,8 +11,7 @@
 #include "PID.hpp"
 #include "Logger.hpp"
 #include "StateMachine.hpp"
-#include "FreeRTOS.h"
-#include "task.h"
+#include "cmsis_os2.h"
 
 using namespace DriversCustom::Motor;
 using namespace DriversCustom::Encoder;
@@ -21,22 +20,22 @@ using namespace Libs::Utils;
 
 namespace Tasks {
 
-TaskHandle_t MotorTask::threadId_ = nullptr;
+osThreadId_t MotorTask::threadId_ = nullptr;
 
 void MotorTask::create() {
     Logger::info("MotorTask: Création de la tâche");
-    constexpr uint16_t stackWords = 1024 / sizeof(StackType_t); // 1024 bytes
-    const UBaseType_t priority = tskIDLE_PRIORITY + 3;
-    const BaseType_t rc = xTaskCreate(threadFunc,
-                                      "MotorTask",
-                                      stackWords,
-                                      nullptr,
-                                      priority,
-                                      &threadId_);
-    if (rc == pdPASS) {
+    
+    const osThreadAttr_t attr = {
+        .name = "MotorTask",
+        .stack_size = 2048,
+        .priority = osPriorityAboveNormal,
+    };
+    
+    threadId_ = osThreadNew(threadFunc, nullptr, &attr);
+    if (threadId_ != nullptr) {
         Logger::info("MotorTask: Tâche créée avec succès - ThreadID: %p", (void*)threadId_);
     } else {
-        Logger::error("MotorTask: ERREUR - Echec de la création de la tâche (xTaskCreate failed)");
+        Logger::error("MotorTask: ERREUR - Echec de la création de la tâche (osThreadNew failed)");
     }
 }
 
@@ -67,42 +66,50 @@ void MotorTask::threadFunc(void* ) {
 
     Logger::info("MotorTask: Démarrage - Moteurs en avant");
     
-    // Mettre les moteurs en avant à 30%
-    drv.setMotors(0.3f, 0.3f);
+    // Mettre les moteurs en avant à 10%
+    drv.setMotors(0.1f, 0.1f);
     Logger::info("MotorTask: setMotors appelé, entrée dans la boucle main");
     
     const uint32_t periodMs = 1000 / 200; // default 200Hz
     uint32_t loopCount = 0;
+    bool motorsEnabled = true;
     
     while (true) {
         loopCount++;
         
-        // Log CHAQUE itération (1 sur 10) pour voir si on boucle vraiment
+    //     // Log CHAQUE itération (1 sur 10) pour voir si on boucle vraiment
         if (loopCount % 10 == 0) {
             Logger::info("MotorTask: Avant StateMachine check - iteration %lu", loopCount);
+            if (motorsEnabled) {
+                drv.setMotors(-0.1f, -0.1f);
+                motorsEnabled = false;
+            } else {
+                drv.setMotors(0.1f, 0.1f);
+                motorsEnabled = true;
+            }
         }
         
-        App::RobotState state = App::StateMachine::getState();
-        if (state == App::RobotState::EMERGENCY_STOP) {
-            Logger::warn("MotorTask: EMERGENCY_STOP détecté!");
-            drv.setLeftDuty(0.0f);
-            drv.setRightDuty(0.0f);
-            vTaskDelay(pdMS_TO_TICKS(10));
-            continue;
-        }
+    //     App::RobotState state = App::StateMachine::getState();
+    //     if (state == App::RobotState::EMERGENCY_STOP) {
+    //         Logger::warn("MotorTask: EMERGENCY_STOP détecté!");
+    //         drv.setLeftDuty(0.0f);
+    //         drv.setRightDuty(0.0f);
+    //         osDelay(10);
+    //         continue;
+    //     }
 
-        // Les moteurs continuent d'avancer indéfiniment
-        drv.setMotors(0.3f, 0.3f);  // Avant à 30%
+    //     // Les moteurs continuent d'avancer indéfiniment
+    //     drv.setMotors(0.1f, 0.1f);  // Avant à 30%
         
-        if (loopCount % 10 == 0) {
-            Logger::info("MotorTask: Avant osDelay - iteration %lu, period=%lu ms", loopCount, periodMs);
-        }
+    //     if (loopCount % 10 == 0) {
+    //         Logger::info("MotorTask: Avant osDelay - iteration %lu, period=%lu ms", loopCount, periodMs);
+    //     }
 
-        //vTaskDelay(pdMS_TO_TICKS(periodMs));
+        osDelay(100);
         
-        if (loopCount % 10 == 0) {
-            Logger::info("MotorTask: APRÈS osDelay - iteration %lu", loopCount);
-        }
+    //     if (loopCount % 10 == 0) {
+    //         Logger::info("MotorTask: APRÈS osDelay - iteration %lu", loopCount);
+    //     }
     }
 }
 

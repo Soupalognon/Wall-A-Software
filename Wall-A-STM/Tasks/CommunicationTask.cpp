@@ -8,28 +8,26 @@
 #include "CommunicationTask.hpp"
 #include "Logger.hpp"
 #include "main.h" // for USB / Ethernet handles if needed
-#include "FreeRTOS.h"
-#include "task.h"
+#include "cmsis_os2.h"
 
 using namespace Libs::Utils;
 
 namespace Tasks {
 
-TaskHandle_t CommunicationTask::threadId_ = nullptr;
+osThreadId_t CommunicationTask::threadId_ = nullptr;
 
 void CommunicationTask::create() {
-    constexpr uint16_t stackWords = 1024 / sizeof(StackType_t); // 1024 bytes
-    const UBaseType_t priority = tskIDLE_PRIORITY + 2;
-    const BaseType_t rc = xTaskCreate(threadFunc,
-                                      "CommTask",
-                                      stackWords,
-                                      nullptr,
-                                      priority,
-                                      &threadId_);
-    if (rc == pdPASS) {
+    const osThreadAttr_t attr = {
+        .name = "CommTask",
+        .stack_size = 1024,
+        .priority = osPriorityNormal,
+    };
+    
+    threadId_ = osThreadNew(threadFunc, nullptr, &attr);
+    if (threadId_ != nullptr) {
         Logger::info("CommunicationTask: Tâche créée - ThreadID: %p", (void*)threadId_);
     } else {
-        Logger::error("CommunicationTask: ERREUR création (xTaskCreate failed)");
+        Logger::error("CommunicationTask: ERREUR création (osThreadNew failed)");
     }
 }
 
@@ -46,7 +44,7 @@ void CommunicationTask::threadFunc(void*) {
         
         // TODO: setup USB CDC / lwIP sockets if needed. Use non-blocking APIs.
         // Example: poll USB CDC for commands and dispatch
-        vTaskDelay(pdMS_TO_TICKS(50));
+        osDelay(50);
     }
 }
 

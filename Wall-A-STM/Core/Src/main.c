@@ -19,8 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "string.h"
-#include "FreeRTOS.h"
-#include "task.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -74,9 +73,12 @@ UART_HandleTypeDef huart6;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* Definitions for defaultTask */
-TaskHandle_t defaultTaskHandle;
-#define DEFAULT_TASK_STACK_WORDS (128)            // 128 words = 512 bytes
-#define DEFAULT_TASK_PRIORITY    (tskIDLE_PRIORITY + 1)
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .stack_size = 1024 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -162,17 +164,39 @@ int main(void)
 
   /* USER CODE END 2 */
 
-  /* Create the default task and start scheduler */
-  if (xTaskCreate(StartDefaultTask,
-                  "defaultTask",
-                  DEFAULT_TASK_STACK_WORDS,
-                  NULL,
-                  DEFAULT_TASK_PRIORITY,
-                  &defaultTaskHandle) != pdPASS) {
-    Error_Handler();
-  }
+  /* Init scheduler */
+  osKernelInitialize();
 
-  vTaskStartScheduler();
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of defaultTask */
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
+  /* Start scheduler */
+  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
 
@@ -181,6 +205,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -572,7 +597,7 @@ static void MX_TIM1_Init(void)
   htim1.Init.Period = 65535;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
@@ -603,15 +628,7 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();
   }
@@ -1077,7 +1094,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOE, LED_ORANGE_Pin|LED_GREEN_Pin|LED_BLUE_Pin|LED_RED_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3|WHEEL_PWM2_Pin|WHEEL_PWM4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOF, PRI_MOTOR_SLEEP_Pin|SENSOR_PULSE_3_Pin|SENSOR_PULSE_1_Pin, GPIO_PIN_RESET);
@@ -1093,9 +1110,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(SERVO_ROBOTIS_TX_ENABLE_GPIO_Port, SERVO_ROBOTIS_TX_ENABLE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : LED_ORANGE_Pin PE3 LED_GREEN_Pin LED_BLUE_Pin
-                           LED_RED_Pin */
+                           LED_RED_Pin WHEEL_PWM2_Pin WHEEL_PWM4_Pin */
   GPIO_InitStruct.Pin = LED_ORANGE_Pin|GPIO_PIN_3|LED_GREEN_Pin|LED_BLUE_Pin
-                          |LED_RED_Pin;
+                          |LED_RED_Pin|WHEEL_PWM2_Pin|WHEEL_PWM4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -1188,10 +1205,8 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-
   extern void cppMain(void);
   cppMain();
-  vTaskDelete(NULL);
   /* USER CODE END 5 */
 }
 

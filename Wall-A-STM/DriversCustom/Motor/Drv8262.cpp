@@ -34,12 +34,12 @@ void Drv8262::init() {
     }
     Libs::Utils::Logger::info("Drv8262: PWM CH1 démarré OK");
     
-    HAL_StatusTypeDef rc2 = HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+    HAL_StatusTypeDef rc2 = HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
     if (rc2 != HAL_OK) {
-        Libs::Utils::Logger::error("Drv8262: ERREUR démarrage PWM CH2 (status=%d)", rc2);
+        Libs::Utils::Logger::error("Drv8262: ERREUR démarrage PWM CH3 (status=%d)", rc2);
         return;
     }
-    Libs::Utils::Logger::info("Drv8262: PWM CH2 démarré OK");
+    Libs::Utils::Logger::info("Drv8262: PWM CH3 démarré OK");
     
     // Log de debug: config TIM1
     Libs::Utils::Logger::info("Drv8262: TIM1 ARR=%lu, PSC=%lu", htim1.Init.Period, htim1.Init.Prescaler);
@@ -53,6 +53,12 @@ void Drv8262::init() {
     // Activer le driver (sortir du mode SLEEP)
     enable(true);
     Libs::Utils::Logger::info("Drv8262: Driver activé (PRI_MOTOR_SLEEP = HIGH)");
+
+    HAL_Delay(10); // délai pour stabiliser le driver
+
+    GPIO_PinState laaa = HAL_GPIO_ReadPin(PRI_MOTOR_NFAULT_GPIO_Port, PRI_MOTOR_NFAULT_Pin);
+
+    Libs::Utils::Logger::info("Drv8262: PRI_MOTOR_NFAULT = %s", (laaa == GPIO_PIN_SET) ? "HIGH" : "LOW");
     
     Libs::Utils::Logger::info("Drv8262: Init OK");
 }
@@ -86,8 +92,10 @@ static void setLeftDirection(float duty) {
     // Pas de pins IN pour le primaire - la direction ne peut pas être controlée via GPIO
     // LOG seulement pour debug
     if (duty > 0.01f) {
+        HAL_GPIO_WritePin(WHEEL_PWM2_GPIO_Port, WHEEL_PWM2_Pin, GPIO_PIN_SET);
         Libs::Utils::Logger::info("Drv8262: Moteur gauche AVANT (duty=%.2f)", duty);
     } else if (duty < -0.01f) {
+        HAL_GPIO_WritePin(WHEEL_PWM2_GPIO_Port, WHEEL_PWM2_Pin, GPIO_PIN_RESET);
         Libs::Utils::Logger::info("Drv8262: Moteur gauche ARRIERE (duty=%.2f)", duty);
     } else {
         Libs::Utils::Logger::info("Drv8262: Moteur gauche FREIN (duty=%.2f)", duty);
@@ -105,8 +113,10 @@ static void setRightDirection(float duty) {
     // LOG seulement pour debug
     if (duty > 0.01f) {
         Libs::Utils::Logger::info("Drv8262: Moteur droit AVANT (duty=%.2f)", duty);
+        HAL_GPIO_WritePin(WHEEL_PWM4_GPIO_Port, WHEEL_PWM4_Pin, GPIO_PIN_SET);
     } else if (duty < -0.01f) {
         Libs::Utils::Logger::info("Drv8262: Moteur droit ARRIERE (duty=%.2f)", duty);
+        HAL_GPIO_WritePin(WHEEL_PWM4_GPIO_Port, WHEEL_PWM4_Pin, GPIO_PIN_RESET);
     } else {
         Libs::Utils::Logger::info("Drv8262: Moteur droit FREIN (duty=%.2f)", duty);
     }
@@ -134,12 +144,12 @@ void Drv8262::setRightDuty(float duty) {
     // Configurer le PWM (valeur absolue) sur WHEEL_PWM2 (TIM1_CH2 = PE11)
     uint32_t ccr = dutyToCCR(duty);
     
-    // Écrire dans CCR2
-    TIM1->CCR2 = ccr;
+    // Écrire dans CCR3
+    TIM1->CCR3 = ccr;
     
     // Vérifier que ça a été écrit
-    uint32_t verif = TIM1->CCR2;
-    Libs::Utils::Logger::info("Drv8262: CH2 CCR = %lu (duty=%.2f, verif=%lu)", ccr, duty, verif);
+    uint32_t verif = TIM1->CCR3;
+    Libs::Utils::Logger::info("Drv8262: CH3 CCR = %lu (duty=%.2f, verif=%lu)", ccr, duty, verif);
 }
 
 void Drv8262::enable(bool en) {

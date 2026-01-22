@@ -47,10 +47,15 @@ static void vprint(const char* tag, const char* fmt, va_list args)
     buffer[total++] = '\r';
     buffer[total++] = '\n';
 
+    // Transmit via UART (non-blocking) USEFULL IF THREAD SAFE
+    // HAL_UART_Transmit_IT(&huart1,
+    //                   reinterpret_cast<uint8_t*>(buffer),
+    //                   total);
+
     HAL_UART_Transmit(&huart1,
                       reinterpret_cast<uint8_t*>(buffer),
                       total,
-                      HAL_MAX_DELAY);
+                      HAL_MAX_DELAY);                  
 }
 
 void Logger::info(const char* fmt, ...)

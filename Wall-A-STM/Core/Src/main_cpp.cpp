@@ -18,4 +18,8 @@ extern UART_HandleTypeDef huart1;
 
 extern "C" void cppMain() {
 	WallAApp_Init();
+
+	while (1) {
+		osDelay(1);
+	}
 }

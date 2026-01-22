@@ -9,8 +9,7 @@
 #define CONTROLTASK_HPP_
 
 #pragma once
-#include "FreeRTOS.h"
-#include "task.h"
+#include "cmsis_os2.h"
 
 namespace Tasks {
 class ControlTask {
@@ -18,7 +17,7 @@ public:
     static void create();
 private:
     static void threadFunc(void* arg);
-    static TaskHandle_t threadId_;
+    static osThreadId_t threadId_;
 };
 } // namespace Tasks
 

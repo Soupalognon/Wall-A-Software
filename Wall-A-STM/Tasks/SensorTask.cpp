@@ -11,28 +11,26 @@
 #include "PowerManager.hpp"
 #include "MovingAverage.hpp"
 #include "Logger.hpp"
-#include "FreeRTOS.h"
-#include "task.h"
+#include "cmsis_os2.h"
 
 using namespace Libs::Utils;
 
 namespace Tasks {
 
-TaskHandle_t SensorTask::threadId_ = nullptr;
+osThreadId_t SensorTask::threadId_ = nullptr;
 
 void SensorTask::create() {
-    constexpr uint16_t stackWords = 768 / sizeof(StackType_t); // 768 bytes
-    const UBaseType_t priority = tskIDLE_PRIORITY + 2;
-    const BaseType_t rc = xTaskCreate(threadFunc,
-                                      "SensorTask",
-                                      stackWords,
-                                      nullptr,
-                                      priority,
-                                      &threadId_);
-    if (rc == pdPASS) {
+    const osThreadAttr_t attr = {
+        .name = "SensorTask",
+        .stack_size = 1024,
+        .priority = osPriorityNormal,
+    };
+    
+    threadId_ = osThreadNew(threadFunc, nullptr, &attr);
+    if (threadId_ != nullptr) {
         Logger::info("SensorTask: Tâche créée - ThreadID: %p", (void*)threadId_);
     } else {
-        Logger::error("SensorTask: ERREUR création (xTaskCreate failed)");
+        Logger::error("SensorTask: ERREUR création (osThreadNew failed)");
     }
 }
 
@@ -63,7 +61,7 @@ void SensorTask::threadFunc(void*) {
         avgPol.push(d2);
         // Optionally publish to queue or global telemetry
 
-        vTaskDelay(pdMS_TO_TICKS(pollMs));
+        osDelay(pollMs);
     }
 }
 

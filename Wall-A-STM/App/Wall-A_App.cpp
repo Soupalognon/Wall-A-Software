@@ -29,12 +29,12 @@ void WallAApp::init() {
     // Create tasks (CMSIS-RTOS v2)
     Libs::Utils::Logger::info("Creating MotorTask...");
     Tasks::MotorTask::create();
-    // Libs::Utils::Logger::info("Creating SensorTask...");
-    // Tasks::SensorTask::create();
-    // Libs::Utils::Logger::info("Creating ControlTask...");
-    // Tasks::ControlTask::create();
-    // Libs::Utils::Logger::info("Creating CommunicationTask...");
-    // Tasks::CommunicationTask::create();
+    Libs::Utils::Logger::info("Creating SensorTask...");
+    Tasks::SensorTask::create();
+    Libs::Utils::Logger::info("Creating ControlTask...");
+    Tasks::ControlTask::create();
+    Libs::Utils::Logger::info("Creating CommunicationTask...");
+    Tasks::CommunicationTask::create();
 
     Libs::Utils::Logger::info("=== RobotApp initialization complete ===");
     Libs::Utils::Logger::info("DefaultTask: finishing - passing control to higher priority tasks");

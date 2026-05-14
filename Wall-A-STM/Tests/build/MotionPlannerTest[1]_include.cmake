@@ -1,0 +1,5 @@
+if(EXISTS "C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/MotionPlannerTest[1]_tests.cmake")
+  include("C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/MotionPlannerTest[1]_tests.cmake")
+else()
+  add_test(MotionPlannerTest_NOT_BUILT MotionPlannerTest_NOT_BUILT)
+endif()

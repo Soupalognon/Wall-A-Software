@@ -1,0 +1,5 @@
+if(EXISTS "C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/OdoControlTest[1]_tests.cmake")
+  include("C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/OdoControlTest[1]_tests.cmake")
+else()
+  add_test(OdoControlTest_NOT_BUILT OdoControlTest_NOT_BUILT)
+endif()

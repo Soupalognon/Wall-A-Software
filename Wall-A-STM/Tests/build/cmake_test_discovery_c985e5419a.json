@@ -1,0 +1,42 @@
+{
+  "tests": 6,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "ExternalCommTest",
+      "tests": 6,
+      "testsuite": [
+        {
+          "name": "PublishTelemetry_EnqueuesForTx",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ExternalCommTest.cpp",
+          "line": 62
+        },
+        {
+          "name": "CmdMove_WritesToMotionMailbox",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ExternalCommTest.cpp",
+          "line": 73
+        },
+        {
+          "name": "CmdActuator_CallsCommandById",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ExternalCommTest.cpp",
+          "line": 85
+        },
+        {
+          "name": "InvalidCmd_NoCrash_LogPublished",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ExternalCommTest.cpp",
+          "line": 94
+        },
+        {
+          "name": "UartPriority_OverwritesUsbCmd",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ExternalCommTest.cpp",
+          "line": 109
+        },
+        {
+          "name": "CommSnapshot_UpdatedOnRx",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ExternalCommTest.cpp",
+          "line": 121
+        }
+      ]
+    }
+  ]
+}

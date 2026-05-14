@@ -1,0 +1,37 @@
+{
+  "tests": 5,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "ConcreteOdomHALTest",
+      "tests": 5,
+      "testsuite": [
+        {
+          "name": "ZeroTicksNoDisplacement",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ConcreteOdomHALTest.cpp",
+          "line": 22
+        },
+        {
+          "name": "EqualForwardTicksMovesStraight",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ConcreteOdomHALTest.cpp",
+          "line": 34
+        },
+        {
+          "name": "LeftTickOnlyTurnsRight",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ConcreteOdomHALTest.cpp",
+          "line": 51
+        },
+        {
+          "name": "AngleNormalizationStaysInBounds",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ConcreteOdomHALTest.cpp",
+          "line": 65
+        },
+        {
+          "name": "SignFlipChangesTrajectory",
+          "file": "C:\/Users\/gdurand\/Downloads\/bmad - robot CDR\/robot-cdr\/Tests\/Unit\/ConcreteOdomHALTest.cpp",
+          "line": 82
+        }
+      ]
+    }
+  ]
+}

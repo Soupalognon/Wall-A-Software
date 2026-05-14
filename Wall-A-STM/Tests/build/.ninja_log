@@ -1,0 +1,92 @@
+# ninja log v7
+99	622	8004726674020219	CMakeFiles/ExternalCommTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/BusFormat.cpp.obj	3a0e6c12dff6717e
+60	548	8004726673637248	CMakeFiles/BusFormatTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/BusFormat.cpp.obj	83dad7911e8b0a2e
+111	1588	8004726674160701	CMakeFiles/ExternalCommTest.dir/Stubs/FreeRTOSStub.cpp.obj	5067a4efae8c63a7
+42	2877	8004726673467450	_deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.obj	873c96095c1af74d
+51	3877	8004726673571556	CMakeFiles/BusFormatTest.dir/Unit/BusFormatTest.cpp.obj	515543f983cdd822
+1756	4791	8004726690601138	_deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.obj	629b3b6de80de6ef
+11	1656	8004815958728230	CMakeFiles/ExternalCommTest.dir/Unit/ExternalCommTest.cpp.obj	2ebf3da4e833b4e2
+34	5290	8004726673346745	_deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.obj	788742d7379648b0
+22	10560	8004726673263076	_deps/googletest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.obj	bab559e6989144b5
+17	599	8004815958868538	CMakeFiles/ExternalCommTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Tasks/ExternalComm.cpp.obj	393358ed2ca8c1ad
+10561	11050	8004726778658715	lib/libgtest.a	4d31ad82ca95a82f
+11057	11361	8004726783589085	lib/libgtest_main.a	1d178d22a0739f0d
+11050	11403	8004726783501795	lib/libgmock.a	3da0371997438177
+11403	11749	8004726787090151	lib/libgmock_main.a	8a28c1cb750faa4a
+11361	12486	8004726797653756	BusFormatTest.exe	7ecf7f8402efaa38
+11361	12486	8004726797653756	BusFormatTest[1]_tests.cmake	7ecf7f8402efaa38
+11361	12486	8004726797653756	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/BusFormatTest[1]_tests.cmake	7ecf7f8402efaa38
+23	243	8004815958933410	CMakeFiles/ExternalCommTest.dir/Stubs/StaticDefs.cpp.obj	d67994a9a3d24b94
+1657	2320	8004815981778732	ExternalCommTest.exe	e6aa956bd9c1755c
+1657	2320	8004815981778732	ExternalCommTest[1]_tests.cmake	e6aa956bd9c1755c
+1657	2320	8004815981778732	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/ExternalCommTest[1]_tests.cmake	e6aa956bd9c1755c
+53	745	8004754167529909	CMakeFiles/ConcreteOdomHALTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Drivers/ConcreteOdomHAL.cpp.obj	9fd36d724260102b
+176	1721	8004726674809037	CMakeFiles/ConcreteOdomHALTest.dir/Stubs/FreeRTOSStub.cpp.obj	f260a04ce34dcc5f
+11	1320	8004814536427661	CMakeFiles/ConcreteOdomHALTest.dir/Unit/ConcreteOdomHALTest.cpp.obj	866d05b9e5b9fd5f
+410	1206	8004815970621651	ConcreteOdomHALTest.exe	f2ea781e4ca77fa2
+410	1206	8004815970621651	ConcreteOdomHALTest[1]_tests.cmake	f2ea781e4ca77fa2
+410	1206	8004815970621651	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/ConcreteOdomHALTest[1]_tests.cmake	f2ea781e4ca77fa2
+90	350	8004754167891866	CMakeFiles/OdoControlTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Tasks/Pid.cpp.obj	35a29f1cd7d6f1fc
+737	1417	8004726680422988	CMakeFiles/OdoControlTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/BusFormat.cpp.obj	b33b3033c63e5178
+38	420	8004815959092916	CMakeFiles/OdoControlTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Tasks/OdoControl.cpp.obj	d5061822454a8b4d
+991	2522	8004726682963664	CMakeFiles/OdoControlTest.dir/Stubs/FreeRTOSStub.cpp.obj	e7c5ca6f6042ff81
+33	1702	8004815959027633	CMakeFiles/OdoControlTest.dir/Unit/OdoControlTest.cpp.obj	21954e72c39c9743
+1703	2366	8004815982235833	OdoControlTest.exe	44157b181d430f3c
+1703	2366	8004815982235833	OdoControlTest[1]_tests.cmake	44157b181d430f3c
+1703	2366	8004815982235833	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/OdoControlTest[1]_tests.cmake	44157b181d430f3c
+1588	2298	8004726688936024	CMakeFiles/MotionPlannerTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/BusFormat.cpp.obj	bd8dbd3a1cf2248b
+1417	2601	8004726687224459	CMakeFiles/MotionPlannerTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Tasks/MotionPlanner.cpp.obj	e1ad24863372c285
+1721	3069	8004726690257282	CMakeFiles/MotionPlannerTest.dir/Stubs/FreeRTOSStub.cpp.obj	6c7a9ae506f3e69c
+45	1636	8004815959161115	CMakeFiles/MotionPlannerTest.dir/Unit/MotionPlannerTest.cpp.obj	fff67b7c95f45394
+1636	2293	8004815981490969	MotionPlannerTest.exe	806af8c52b2ceecb
+1636	2293	8004815981490969	MotionPlannerTest[1]_tests.cmake	806af8c52b2ceecb
+1636	2293	8004815981490969	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/MotionPlannerTest[1]_tests.cmake	806af8c52b2ceecb
+6	118	8004726671463969	clean	f8b5524ac59d5540
+3	1408	8004842257376789	build.ninja	a5a35ef2e8a2d8d3
+3	1408	8004842257044533	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/cmake_install.cmake	a5a35ef2e8a2d8d3
+3	1408	8004842257088470	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/cmake_install.cmake	a5a35ef2e8a2d8d3
+3	1408	8004842257088470	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/googlemock/cmake_install.cmake	a5a35ef2e8a2d8d3
+3	1408	8004842257285417	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/googletest/cmake_install.cmake	a5a35ef2e8a2d8d3
+3	1408	8004842257088470	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/CTestTestfile.cmake	a5a35ef2e8a2d8d3
+3	1408	8004842257173921	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/googlemock/CTestTestfile.cmake	a5a35ef2e8a2d8d3
+3	1408	8004842257305418	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/googletest/CTestTestfile.cmake	a5a35ef2e8a2d8d3
+28	410	8004815958955665	CMakeFiles/ConcreteOdomHALTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Drivers/Odometry.cpp.obj	35608e0c0ededf31
+3	1182	8004842257376789	build.ninja	a5a35ef2e8a2d8d3
+3	1182	8004842257376789	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/cmake_install.cmake	a5a35ef2e8a2d8d3
+3	1182	8004842257376789	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/cmake_install.cmake	a5a35ef2e8a2d8d3
+3	1182	8004842257376789	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/googlemock/cmake_install.cmake	a5a35ef2e8a2d8d3
+3	1182	8004842257376789	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/googletest/cmake_install.cmake	a5a35ef2e8a2d8d3
+3	1182	8004842257376789	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/CTestTestfile.cmake	a5a35ef2e8a2d8d3
+3	1182	8004842257376789	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/googlemock/CTestTestfile.cmake	a5a35ef2e8a2d8d3
+3	1182	8004842257376789	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/_deps/googletest-build/googletest/CTestTestfile.cmake	a5a35ef2e8a2d8d3
+16	281	8004842257915627	CMakeFiles/BusFormatTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Services/BusFormat.cpp.obj	4d559be62e03d2a2
+32	325	8004842258135594	CMakeFiles/ExternalCommTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Services/BusFormat.cpp.obj	14125786179904f1
+84	343	8004842258655634	CMakeFiles/OdoControlTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Controllers/Pid.cpp.obj	7d6d2d16594d338c
+93	438	8004842258757273	CMakeFiles/OdoControlTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Services/BusFormat.cpp.obj	a7f33f14dd9639cd
+37	446	8004842258189432	CMakeFiles/ExternalCommTest.dir/Stubs/StaticDefs.cpp.obj	d67994a9a3d24b94
+325	635	8004842261072824	CMakeFiles/MotionPlannerTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Services/BusFormat.cpp.obj	a57a135dce286b15
+51	748	8004842258309746	CMakeFiles/ConcreteOdomHALTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Services/Odometry.cpp.obj	3395c0f29b36b74b
+75	811	8004842258569808	CMakeFiles/OdoControlTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Tasks/OdoControl.cpp.obj	d5061822454a8b4d
+282	891	8004842260633117	CMakeFiles/MotionPlannerTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Tasks/MotionPlanner.cpp.obj	e1ad24863372c285
+58	940	8004842258404741	CMakeFiles/ConcreteOdomHALTest.dir/Stubs/FreeRTOSStub.cpp.obj	9b638b907ed66233
+26	1037	8004842258073096	CMakeFiles/ExternalCommTest.dir/C_/Users/gdurand/Downloads/bmad_-_robot_CDR/robot-cdr/App/Tasks/ExternalComm.cpp.obj	393358ed2ca8c1ad
+44	2049	8004842258257174	CMakeFiles/ConcreteOdomHALTest.dir/Unit/ConcreteOdomHALTest.cpp.obj	642876989ffd7607
+11	2071	8004842257915627	CMakeFiles/BusFormatTest.dir/Unit/BusFormatTest.cpp.obj	515543f983cdd822
+102	2188	8004842258837628	CMakeFiles/MotionPlannerTest.dir/Unit/MotionPlannerTest.cpp.obj	fff67b7c95f45394
+20	2233	8004842258014529	CMakeFiles/ExternalCommTest.dir/Unit/ExternalCommTest.cpp.obj	2ebf3da4e833b4e2
+68	2300	8004842258489806	CMakeFiles/OdoControlTest.dir/Unit/OdoControlTest.cpp.obj	21954e72c39c9743
+2050	2811	8004842285754155	ConcreteOdomHALTest.exe	e6653e0bfd5fcb9c
+2050	2811	8004842285754155	ConcreteOdomHALTest[1]_tests.cmake	e6653e0bfd5fcb9c
+2050	2811	8004842285754155	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/ConcreteOdomHALTest[1]_tests.cmake	e6653e0bfd5fcb9c
+2071	2814	8004842285787395	BusFormatTest.exe	336694ffda53cece
+2071	2814	8004842285787395	BusFormatTest[1]_tests.cmake	336694ffda53cece
+2071	2814	8004842285787395	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/BusFormatTest[1]_tests.cmake	336694ffda53cece
+2188	2850	8004842286178323	MotionPlannerTest.exe	9250f67279f3cec
+2188	2850	8004842286178323	MotionPlannerTest[1]_tests.cmake	9250f67279f3cec
+2188	2850	8004842286178323	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/MotionPlannerTest[1]_tests.cmake	9250f67279f3cec
+2234	2906	8004842286733740	ExternalCommTest.exe	6a8c06378d6623cc
+2234	2906	8004842286733740	ExternalCommTest[1]_tests.cmake	6a8c06378d6623cc
+2234	2906	8004842286733740	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/ExternalCommTest[1]_tests.cmake	6a8c06378d6623cc
+2300	2979	8004842287490189	OdoControlTest.exe	c0c8a4b10934ff44
+2300	2979	8004842287490189	OdoControlTest[1]_tests.cmake	c0c8a4b10934ff44
+2300	2979	8004842287490189	C:/Users/gdurand/Downloads/bmad - robot CDR/robot-cdr/Tests/build/OdoControlTest[1]_tests.cmake	c0c8a4b10934ff44

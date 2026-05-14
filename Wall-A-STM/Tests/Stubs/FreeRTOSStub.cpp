@@ -1,6 +1,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
+#include "HalStub.h"
 #include <vector>
 #include <deque>
 #include <cstring>
@@ -98,10 +99,25 @@ void vTaskDelayUntil(TickType_t* pxPreviousWakeTime, TickType_t xTimeIncrement) 
 }
 TickType_t xTaskGetTickCount(void) { return 0; }
 BaseType_t xTaskCreate(TaskFunction_t, const char*, uint16_t, void*, UBaseType_t, TaskHandle_t*) { return pdTRUE; }
-BaseType_t xTaskNotify(TaskHandle_t, uint32_t, eNotifyAction) { return pdTRUE; }
-BaseType_t xTaskNotifyWait(uint32_t, uint32_t, uint32_t* pulNotificationValue,
-                           TickType_t xTicksToWait) {
-    if (pulNotificationValue) *pulNotificationValue = 0;
+
+uint32_t& getMockTick() {
+    static uint32_t tick = 0;
+    return tick;
+}
+
+static uint32_t g_notifyBits = 0;
+
+void resetTestNotifications() { g_notifyBits = 0; }
+
+BaseType_t xTaskNotify(TaskHandle_t, uint32_t ulValue, eNotifyAction eAction) {
+    if (eAction == eSetBits) g_notifyBits |= ulValue;
+    return pdTRUE;
+}
+BaseType_t xTaskNotifyWait(uint32_t ulBitsToClearOnEntry, uint32_t ulBitsToClearOnExit,
+                           uint32_t* pulNotificationValue, TickType_t xTicksToWait) {
+    g_notifyBits &= ~ulBitsToClearOnEntry;
+    if (pulNotificationValue) *pulNotificationValue = g_notifyBits;
+    g_notifyBits &= ~ulBitsToClearOnExit;
     if (xTicksToWait == portMAX_DELAY) throw TaskDelayEscape{};
-    return pdFALSE;
+    return pdTRUE;
 }

@@ -13,6 +13,7 @@ public:
     static const char* altAlarm(uint32_t bitmask);
     static const char* altStall();
     static const char* altEncoderFault(const char* side);
+    static const char* hltSensors(uint8_t count, uint32_t alarmMask);
 };
 
 #endif // APP_SERVICES_BUSFORMAT_H

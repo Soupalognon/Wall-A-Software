@@ -44,3 +44,11 @@ const char* BusFormat::altEncoderFault(const char* side) {
     snprintf(buf, sizeof(buf), "ALT ENCODER_FAULT %s\n", side);
     return buf;
 }
+
+const char* BusFormat::hltSensors(uint8_t count, uint32_t alarmMask) {
+    static char buf[48];
+    snprintf(buf, sizeof(buf), "HLT SENSORS N=%u ALM=0x%08lX\n",
+             static_cast<unsigned>(count),
+             static_cast<unsigned long>(alarmMask));
+    return buf;
+}

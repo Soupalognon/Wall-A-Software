@@ -4,11 +4,9 @@
 #include <cstdint>
 
 // Controlled tick counter for tests — set before each test that checks timestamps
-inline uint32_t& getMockTick() {
-    static uint32_t tick = 0;
-    return tick;
-}
+uint32_t& getMockTick();  // defined in FreeRTOSStub.cpp — one instance across all TUs
 inline uint32_t HAL_GetTick() { return getMockTick(); }
+inline void setMockTick(uint32_t v) { getMockTick() = v; }
 
 // Minimal TIM peripheral stub
 struct TIM_TypeDef {

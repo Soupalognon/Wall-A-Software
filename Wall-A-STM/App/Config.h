@@ -39,6 +39,9 @@ namespace Config {
     static constexpr int8_t   MOTOR_R_SIGN           = +1;
     static constexpr uint8_t  TELEM_DIVIDER          = 10;
 
+    // SensorManager polling rate
+    static constexpr uint32_t SENSOR_POLL_MS         = 50;
+
     // Monitoring stale threshold (ms)
     static constexpr uint32_t MONITORING_STALE_MS    = 500;
 

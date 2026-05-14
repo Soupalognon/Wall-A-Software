@@ -1,6 +1,8 @@
 #include "Tasks/MotionPlanner.h"
 #include "Services/BusFormat.h"
 
+TaskHandle_t MotionPlanner::handle = nullptr;
+
 MotionPlanner::MotionPlanner(IBus* bus, QueueHandle_t cmdMailbox, QueueHandle_t setpointMailbox)
     : _bus(bus), _cmdMailbox(cmdMailbox), _setpointMailbox(setpointMailbox) {}
 

@@ -20,7 +20,6 @@ extern UART_HandleTypeDef huart1;
 
 // Static snapshot storage
 ExternalComm::CommSnapshot ExternalComm::latestSnapshot { };
-SensorManager::SensorSnapshot SensorManager::latestSnapshot { };
 
 // Stub HAL wrappers - replace with concrete drivers when hardware is wired
 namespace {
@@ -78,6 +77,15 @@ void SystemInit::boot() {
 		Config::PRIO_ODO_CONTROL, nullptr);
 	xTaskCreate(MotionPlanner::task, "MoPlan", Config::STACK_MOTION_PLANNER, &motionPlanner,
 		Config::PRIO_MOTION_PLANNER, &motionPlannerHandle);
+
+	MotionPlanner::handle = motionPlannerHandle;
+
+	static ISensor* sensors[Config::MAX_SENSORS] = {};
+	static uint8_t  sensorCount = 0;
+	static SensorManager sensorManager{sensors, sensorCount, MotionPlanner::handle, &extComm};
+	xTaskCreate(SensorManager::task, "SensorMgr",
+		Config::STACK_SENSOR_MANAGER, &sensorManager,
+		Config::PRIO_SENSOR_MANAGER, nullptr);
 
 	HAL_UART_Receive_IT(&huart1, uartIsrBuf, 1);
 

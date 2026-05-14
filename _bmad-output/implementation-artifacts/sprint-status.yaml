@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-10
-last_updated: 2026-05-14  # updated: 2-4 → review (OdoControl robustesse, 39/39 tests)
+last_updated: 2026-05-14  # updated: 3-1 → review (SensorManager 10/10 tests)
 project: bmad - robot CDR
 project_key: NOKEY
 tracking_system: file-system
@@ -62,7 +62,7 @@ development_status:
 
   # ── Epic 3: Écosystème Capteurs-Actionneurs ──────────────────────────────
   epic-3: in-progress
-  3-1-sensormanager-polling-isensor-max-sensors-alarmes-xtasknotify: ready-for-dev
+  3-1-sensormanager-polling-isensor-max-sensors-alarmes-xtasknotify: review
   3-2-actuatormanager-iactuator-max-actuators-commandbyid: backlog
   3-3-monitoring-supervision-par-pull-sur-shared-memory-horodatee: backlog
   3-4-drivers-concrets-isensor-et-iactuator: backlog

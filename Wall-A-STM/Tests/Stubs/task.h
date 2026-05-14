@@ -25,4 +25,7 @@ BaseType_t   xTaskNotifyWait(uint32_t ulBitsToClearOnEntry, uint32_t ulBitsToCle
 }
 #endif
 
+// Test utility — reset accumulated xTaskNotify bits between tests
+void resetTestNotifications();
+
 #endif // TESTS_STUBS_TASK_H

@@ -27,10 +27,11 @@ set(MOCKS_DIR "${CMAKE_SOURCE_DIR}/Mocks")
 
 # Common include paths — Stubs FIRST to shadow real FreeRTOS/HAL headers
 set(COMMON_INCLUDES
-    ${STUBS_DIR}          # FreeRTOS.h, queue.h, task.h, stm32f4xx_hal.h stubs (must be first)
-    ${APP_DIR}            # App/ root: Tasks/, Services/, Drivers/, Interfaces/, Controllers/
-    ${MOCKS_DIR}          # MockBus.h, MockCommChannel.h, etc.
-    ${CMAKE_SOURCE_DIR}   # Tests/ root — so #include "Stubs/HalStub.h" resolves
+    ${STUBS_DIR}                        # FreeRTOS.h, queue.h, task.h, stm32f4xx_hal.h stubs (must be first)
+    ${APP_DIR}                          # App/ root: Tasks/, Services/, Drivers/, Interfaces/, Controllers/
+    ${MOCKS_DIR}                        # MockBus.h, MockCommChannel.h, etc.
+    ${CMAKE_SOURCE_DIR}                 # Tests/ root — so #include "Stubs/HalStub.h" resolves
+    ${CMAKE_SOURCE_DIR}/../Core/Inc     # main.h and other CubeMX-generated headers
 )
 
 # ── BusFormatTest ──────────────────────────────────────────────────────────
@@ -82,6 +83,15 @@ add_executable(MotionPlannerTest
 target_include_directories(MotionPlannerTest PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(MotionPlannerTest PRIVATE GTest::gtest_main)
 
+# ── SensorManagerTest ────────────────────────────────────────────────────
+add_executable(SensorManagerTest
+    Unit/SensorManagerTest.cpp
+    ${APP_DIR}/Tasks/SensorManager.cpp
+    ${APP_DIR}/Services/BusFormat.cpp
+    Stubs/FreeRTOSStub.cpp)
+target_include_directories(SensorManagerTest PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(SensorManagerTest PRIVATE GTest::gtest_main)
+
 # ── Test discovery ─────────────────────────────────────────────────────────
 include(GoogleTest)
 gtest_discover_tests(BusFormatTest)
@@ -89,3 +99,4 @@ gtest_discover_tests(ExternalCommTest)
 gtest_discover_tests(ConcreteOdomHALTest)
 gtest_discover_tests(OdoControlTest)
 gtest_discover_tests(MotionPlannerTest)
+gtest_discover_tests(SensorManagerTest)

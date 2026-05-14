@@ -79,6 +79,7 @@ TESTS=(
     ConcreteOdomHALTest
     OdoControlTest
     MotionPlannerTest
+    SensorManagerTest
 )
 
 declare -A RESULTS

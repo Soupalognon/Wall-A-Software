@@ -12,6 +12,8 @@ struct MoveCmd { float x; float y; float angle; };
 
 class MotionPlanner {
 public:
+    static TaskHandle_t handle;  // set by SystemInit after xTaskCreate; nullptr until then
+
     MotionPlanner(IBus* bus, QueueHandle_t cmdMailbox, QueueHandle_t setpointMailbox);
     static void task(void* param);
 

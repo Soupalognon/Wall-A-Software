@@ -8,7 +8,7 @@ class Drv8262 {
 public:
 	Drv8262() = default;
 
-	void init();
+	bool begin();
 	void setLeftDuty(float duty);
 	void setRightDuty(float duty);
 	void enable(bool en);
@@ -18,9 +18,9 @@ public:
 	bool isError();
 
 private:
-	typedef enum {
-		PRIMARY_MOTOR = 0, SECONDARY_MOTOR = 1, POWER_SUPPLIES = 2,
-	} channel;
+//	typedef enum {
+//		PRIMARY_MOTOR = 0, SECONDARY_MOTOR = 1, POWER_SUPPLIES = 2,
+//	} channel;
 };
 
 #endif // APP_DRIVERS_DRV8262_H

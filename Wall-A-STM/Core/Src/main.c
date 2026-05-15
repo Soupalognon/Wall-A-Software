@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -152,27 +152,25 @@ int main(void)
   MX_USART6_UART_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start(&htim7);  // TIM7 : compteur 10 µs pour getDtFromTimer()
-
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+	/* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
+	/* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
+	/* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
+	/* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -180,11 +178,11 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+	/* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
+	/* add events, ... */
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
@@ -194,12 +192,22 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+
+	HAL_StatusTypeDef rc1 = HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
+	if (rc1 != HAL_OK) {
+	}
+	while (1) {
+		int16_t current = (int16_t) __HAL_TIM_GET_COUNTER(&htim4);
+		//		ExternalComm::log_info("left: %d", current);
+		char data[100];
+		sprintf(data, "current: %d\n", current);
+		HAL_UART_Transmit(&huart1, (const uint8_t*) (data), strlen(data), 100);
+		for (volatile uint32_t i = 0; i < 8000000; i++)
+			;
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+	}
   /* USER CODE END 3 */
 }
 
@@ -847,7 +855,7 @@ static void MX_TIM7_Init(void)
   htim7.Init.Prescaler = 839;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 65535;
-  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     Error_Handler();
@@ -1144,10 +1152,10 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN Header_StartDefaultTask */
 /**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
+ * @brief  Function implementing the defaultTask thread.
+ * @param  argument: Not used
+ * @retval None
+ */
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
@@ -1157,8 +1165,8 @@ void StartDefaultTask(void *argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 5 */
-  extern void cppMain(void);
-  cppMain();
+	extern void cppMain(void);
+	cppMain();
   /* USER CODE END 5 */
 }
 
@@ -1191,11 +1199,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1) {
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT

@@ -5,9 +5,11 @@
 #include "Interfaces/IEncoderHAL.h"
 #include <cstdint>
 
-class ConcreteOdomHAL : public IOdomHAL {
+class Odometry : public IOdomHAL {
 public:
-    ConcreteOdomHAL(IEncoderHAL* encL, IEncoderHAL* encR);
+    Odometry(IEncoderHAL* encL, IEncoderHAL* encR);
+
+    bool begin();
 
     void  update()    override;
     float getX()      override;

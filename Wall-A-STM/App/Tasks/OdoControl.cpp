@@ -13,6 +13,14 @@ void OdoControl::task(void *param) {
 	auto *self = static_cast<OdoControl*>(param);
 	TickType_t lastWake = xTaskGetTickCount();
 	const TickType_t period = pdMS_TO_TICKS(1000 / Config::ODO_FREQ_HZ);
+
+	if(self->_motor->begin() || self->_odom->begin()) {
+		ExternalComm::log_error("OdoControl: Init FAILED. Stop task");
+		self->_bus->publish(Topic::ALERT, BusFormat::altInitFailed("OdoControl"));
+		vTaskDelete(NULL);
+	}
+
+	ExternalComm::log_info("OdoControl: Init OK");
 	for (;;) {
 		vTaskDelayUntil(&lastWake, period);
 		self->tick();
@@ -39,17 +47,19 @@ void OdoControl::tick() {
 	float dy = sp.pose.y - _odom->getY();
 	float errDist = sqrtf(dx * dx + dy * dy);
 
-	if (errDist < Config::ARRIVAL_THRESHOLD) {
-		_motor->setMotors(0.0f, 0.0f);
-		_bus->publish(Topic::ALERT, BusFormat::evtArrival());
-		_hasSetpoint = false;
-		_pidSpeed.reset();
-		_pidAngle.reset();
-		_stallCount = 0;
-		_encFaultCountL = 0;
-		_encFaultCountR = 0;
-		return;
-	}
+//	if (errDist < Config::ARRIVAL_THRESHOLD) {
+//		_motor->setMotors(0.0f, 0.0f);
+//		_bus->publish(Topic::ALERT, BusFormat::evtArrival());
+//		_hasSetpoint = false;
+//		_pidSpeed.reset();
+//		_pidAngle.reset();
+//		_stallCount = 0;
+//		_encFaultCountL = 0;
+//		_encFaultCountR = 0;
+//
+//		xQueueReset(_mailbox);	//TODO: To remove after!!!! Not correct
+//		return;
+//	}
 
 	float rawErrAngle = atan2f(dy, dx) - _odom->getAngle();
 	float errAngle = atan2f(sinf(rawErrAngle), cosf(rawErrAngle));  // normalize to [-π, π]
@@ -76,6 +86,10 @@ void OdoControl::tick() {
 	float avgDuty = (fabsf(leftDuty) + fabsf(rightDuty)) * 0.5f;
 	if (avgDuty > Config::STALL_DUTY_THRESHOLD
 		&& fabsf(_odom->getV()) < Config::STALL_SPEED_THRESHOLD) {
+		//TODO:
+		//Not working! Has encoders are attached to motor and have not distinct wheels
+		//The getV is correlated to duty
+		//Will need to find another system
 		if (++_stallCount >= STALL_TICKS) {
 			_motor->setMotors(0.0f, 0.0f);
 			_bus->publish(Topic::ALERT, BusFormat::altStall());
@@ -116,5 +130,7 @@ void OdoControl::tick() {
 			_odom->getVRight(), rawV, rawW, HAL_GetTick() };
 		_bus->publish(Topic::TELEMETRY,
 			BusFormat::telOdo(_odom->getX(), _odom->getY(), _odom->getAngle()));
+
+		ExternalComm::log_info("v: %ld, w: %ld", (int32_t)(v*1000.0), (int32_t)(w*1000.0));
 	}
 }

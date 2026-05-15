@@ -5,11 +5,13 @@
 
 class MockEncoderHAL : public IEncoderHAL {
 public:
-    int32_t leftTicks  = 0;
-    int32_t rightTicks = 0;
+    bool init() override { return 0; }
+    int32_t getTicks()  override { return ticks;  }
 
-    int32_t getTicksLeft()  override { return leftTicks;  }
-    int32_t getTicksRight() override { return rightTicks; }
+private:
+    int32_t ticks  = 0;
+
+    voir reset() override { ticks = 0; }
 };
 
 #endif // TESTS_MOCKS_MOCKENCODERHAL_H

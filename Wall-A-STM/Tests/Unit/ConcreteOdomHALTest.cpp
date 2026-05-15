@@ -9,7 +9,7 @@
 static constexpr float kPi = static_cast<float>(M_PI);
 
 // --- Helper: run N identical update steps ---
-static void stepN(ConcreteOdomHAL& odom, MockEncoderHAL& encL, MockEncoderHAL& encR,
+static void stepN(Odometry& odom, MockEncoderHAL& encL, MockEncoderHAL& encR,
                   int32_t dTickL, int32_t dTickR, int steps) {
     for (int i = 0; i < steps; ++i) {
         encL.leftTicks  += dTickL;
@@ -21,7 +21,7 @@ static void stepN(ConcreteOdomHAL& odom, MockEncoderHAL& encL, MockEncoderHAL& e
 // Test 1: zero ticks -> position stays at origin
 TEST(ConcreteOdomHALTest, ZeroTicksNoDisplacement) {
     MockEncoderHAL encL, encR;
-    ConcreteOdomHAL odom(&encL, &encR);
+    Odometry odom(&encL, &encR);
 
     odom.update();
 
@@ -33,7 +33,7 @@ TEST(ConcreteOdomHALTest, ZeroTicksNoDisplacement) {
 // Test 2: equal forward ticks both sides -> straight ahead (x > 0, y = 0, angle = 0)
 TEST(ConcreteOdomHALTest, EqualForwardTicksMovesStraight) {
     MockEncoderHAL encL, encR;
-    ConcreteOdomHAL odom(&encL, &encR);
+    Odometry odom(&encL, &encR);
 
     const int32_t N = 200;
     encL.leftTicks  = N;
@@ -50,7 +50,7 @@ TEST(ConcreteOdomHALTest, EqualForwardTicksMovesStraight) {
 // Test 3: left tick only (right=0) -> robot turns right (angle < 0)
 TEST(ConcreteOdomHALTest, LeftTickOnlyTurnsRight) {
     MockEncoderHAL encL, encR;
-    ConcreteOdomHAL odom(&encL, &encR);
+    Odometry odom(&encL, &encR);
 
     const int32_t N = 300;
     encL.leftTicks  = N;
@@ -64,7 +64,7 @@ TEST(ConcreteOdomHALTest, LeftTickOnlyTurnsRight) {
 // Test 4: angle normalization stays within [-pi, +pi] after large rotation
 TEST(ConcreteOdomHALTest, AngleNormalizationStaysInBounds) {
     MockEncoderHAL encL, encR;
-    ConcreteOdomHAL odom(&encL, &encR);
+    Odometry odom(&encL, &encR);
 
     // Accumulate right-only ticks to generate large positive angle (> pi)
     // dTheta per step = dR / WHEEL_BASE = (dTickR * D_PER_TICK) / WHEEL_BASE
@@ -82,7 +82,7 @@ TEST(ConcreteOdomHALTest, AngleNormalizationStaysInBounds) {
 TEST(ConcreteOdomHALTest, SignFlipChangesTrajectory) {
     // Case A: both sides forward (N ticks) -> straight ahead
     MockEncoderHAL encLA, encRA;
-    ConcreteOdomHAL odomA(&encLA, &encRA);
+    Odometry odomA(&encLA, &encRA);
     const int32_t N = 300;
     encLA.leftTicks  = N;
     encRA.rightTicks = N;
@@ -92,7 +92,7 @@ TEST(ConcreteOdomHALTest, SignFlipChangesTrajectory) {
 
     // Case B: left reversed (-N ticks with SIGN=+1 = same as +N ticks with SIGN=-1)
     MockEncoderHAL encLB, encRB;
-    ConcreteOdomHAL odomB(&encLB, &encRB);
+    Odometry odomB(&encLB, &encRB);
     encLB.leftTicks  = -N;
     encRB.rightTicks =  N;
     odomB.update();

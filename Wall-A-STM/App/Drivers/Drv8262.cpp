@@ -6,35 +6,33 @@
 
 extern TIM_HandleTypeDef htim1;
 
-void Drv8262::init() {
-	ExternalComm::log_info("Drv8262: Initialisation...");
+bool Drv8262::begin() {
+//	ExternalComm::log_info("Drv8262: Initialisation...");
 
 	HAL_StatusTypeDef rc1 = HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	if (rc1 != HAL_OK) {
 		ExternalComm::log_error("Drv8262: Error starting PWM CH1 (status=%d). Block thread", rc1);
-		while (1)
-			;
+		return 1;
 	}
 
 	HAL_StatusTypeDef rc2 = HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 	if (rc2 != HAL_OK) {
 		ExternalComm::log_error("Drv8262: Error starting PWM CH3 (status=%d). Block thread", rc2);
-		while (1)
-			;
+		return 1;
 	}
 
 	stop();
-	HAL_Delay(100);
+	vTaskDelay(pdMS_TO_TICKS(100));
 	enable(true);
-	HAL_Delay(10);
+	vTaskDelay(pdMS_TO_TICKS(10));
 
 	if (isError()) {
 		ExternalComm::log_error("Drv8262: Error on init. Block thread");
-		while (1)
-			;
+		return 1;
 	}
 
-	ExternalComm::log_info("Drv8262: Init OK");
+//	ExternalComm::log_info("Drv8262: Init OK");
+	return 0;
 }
 
 static inline uint32_t dutyToCCR(float duty) {
@@ -70,7 +68,7 @@ void Drv8262::setRightDuty(float duty) {
 void Drv8262::enable(bool en) {
 	GPIO_PinState state = en ? GPIO_PIN_SET : GPIO_PIN_RESET;
 	HAL_GPIO_WritePin(PRI_MOTOR_SLEEP_GPIO_Port, PRI_MOTOR_SLEEP_Pin, state);
-	ExternalComm::log_info("Drv8262: PRI_MOTOR_SLEEP = %s", en ? "HIGH" : "LOW");
+//	ExternalComm::log_info("Drv8262: PRI_MOTOR_SLEEP = %s", en ? "HIGH" : "LOW");
 }
 
 void Drv8262::reset() {}

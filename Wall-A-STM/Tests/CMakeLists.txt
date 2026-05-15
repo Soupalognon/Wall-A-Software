@@ -92,6 +92,55 @@ add_executable(SensorManagerTest
 target_include_directories(SensorManagerTest PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(SensorManagerTest PRIVATE GTest::gtest_main)
 
+# ── ActuatorManagerTest ──────────────────────────────────────────────────
+add_executable(ActuatorManagerTest
+    Unit/ActuatorManagerTest.cpp
+    ${APP_DIR}/Tasks/ActuatorManager.cpp
+    ${APP_DIR}/Services/BusFormat.cpp
+    Stubs/FreeRTOSStub.cpp
+)
+target_include_directories(ActuatorManagerTest PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(ActuatorManagerTest PRIVATE GTest::gtest_main)
+
+# ── MonitoringTest ───────────────────────────────────────────────────────
+add_executable(MonitoringTest
+    Unit/MonitoringTest.cpp
+    ${APP_DIR}/Tasks/Monitoring.cpp
+    ${APP_DIR}/Services/BusFormat.cpp
+    Stubs/FreeRTOSStub.cpp
+    Stubs/StaticDefs.cpp
+)
+target_include_directories(MonitoringTest PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(MonitoringTest PRIVATE GTest::gtest_main)
+
+# ── SensorDriversTest ─────────────────────────────────────────────────────
+add_executable(SensorDriversTest
+    Unit/SensorDriversTest.cpp
+    ${APP_DIR}/Drivers/Stubs/ProximitySensor.cpp
+    ${APP_DIR}/Drivers/Stubs/TemperatureSensor.cpp
+    ${APP_DIR}/Drivers/Stubs/CurrentSensor.cpp
+)
+target_include_directories(SensorDriversTest PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(SensorDriversTest PRIVATE GTest::gtest_main)
+
+# ── ActuatorDriversTest ───────────────────────────────────────────────────
+add_executable(ActuatorDriversTest
+    Unit/ActuatorDriversTest.cpp
+    ${APP_DIR}/Drivers/Stubs/Pump.cpp
+    ${APP_DIR}/Drivers/Stubs/Servo.cpp
+    ${APP_DIR}/Drivers/Stubs/LinearTransducer.cpp
+)
+target_include_directories(ActuatorDriversTest PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(ActuatorDriversTest PRIVATE GTest::gtest_main)
+
+# ── PidTest ───────────────────────────────────────────────────────────────
+add_executable(PidTest
+    Unit/PidTest.cpp
+    ${APP_DIR}/Controllers/Pid.cpp
+)
+target_include_directories(PidTest PRIVATE ${COMMON_INCLUDES})
+target_link_libraries(PidTest PRIVATE GTest::gtest_main)
+
 # ── Test discovery ─────────────────────────────────────────────────────────
 include(GoogleTest)
 gtest_discover_tests(BusFormatTest)
@@ -100,3 +149,8 @@ gtest_discover_tests(ConcreteOdomHALTest)
 gtest_discover_tests(OdoControlTest)
 gtest_discover_tests(MotionPlannerTest)
 gtest_discover_tests(SensorManagerTest)
+gtest_discover_tests(ActuatorManagerTest)
+gtest_discover_tests(MonitoringTest)
+gtest_discover_tests(SensorDriversTest)
+gtest_discover_tests(ActuatorDriversTest)
+gtest_discover_tests(PidTest)

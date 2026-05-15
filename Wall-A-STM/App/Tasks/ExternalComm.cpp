@@ -86,6 +86,8 @@ void ExternalComm::publish(Topic topic, const char *payload) {
 void ExternalComm::txTask(void *arg) {
 	ExternalComm *self = static_cast<ExternalComm*>(arg);
 	TxEntry entry;
+
+	ExternalComm::log_info("txTask: Init OK");
 	for (;;) {
 		QueueHandle_t q = xQueueSelectFromSet(self->_txQueueSet, portMAX_DELAY);
 		if (q != nullptr && xQueueReceive(q, &entry, 0) == pdTRUE) {
@@ -98,6 +100,8 @@ void ExternalComm::txTask(void *arg) {
 void ExternalComm::rxTask(void *arg) {
 	ExternalComm *self = static_cast<ExternalComm*>(arg);
 	uint8_t byte;
+
+	ExternalComm::log_info("rxTask: Init OK");
 	for (;;) {
 		if (xQueueReceive(self->_rxByteQueue, &byte, portMAX_DELAY) == pdTRUE) {
 			char c = static_cast<char>(byte);
@@ -148,6 +152,8 @@ void ExternalComm::_processRxLine(const char *line, bool uartSource) {
 		MoveCmd cmd{};
 		sscanf(line, "%*s %*s %f %f %f", &cmd.x, &cmd.y, &cmd.angle);
 		xQueueOverwrite(_motionMailbox, &cmd);
+	} else if (strncmp(verb, "STOP", 4) == 0) {
+		xQueueReset(_motionMailbox);
 	} else if (strncmp(verb, "ACTUATOR", 8) == 0) {
 		char actorId[16] { }, actCmd[32] { };
 		sscanf(line, "%*s %*s %15s %31s", actorId, actCmd);

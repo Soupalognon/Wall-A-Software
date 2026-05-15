@@ -7,11 +7,12 @@
 
 class Motor : public IMotorHAL {
 public:
-    explicit Motor(Drv8262& drv);
+    explicit Motor(Drv8262* drv);
+    bool begin();
     void setMotors(float left, float right) override;
 
 private:
-    Drv8262& _drv;
+    Drv8262* _drv;
 };
 
 #endif // APP_SERVICES_MOTOR_H

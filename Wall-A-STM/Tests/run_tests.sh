@@ -80,6 +80,11 @@ TESTS=(
     OdoControlTest
     MotionPlannerTest
     SensorManagerTest
+    ActuatorManagerTest
+    MonitoringTest
+    SensorDriversTest
+    ActuatorDriversTest
+    PidTest
 )
 
 declare -A RESULTS

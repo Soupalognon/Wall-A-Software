@@ -4,6 +4,7 @@
 class IOdomHAL {
 public:
     virtual ~IOdomHAL() = default;
+    virtual bool begin()      = 0;
     virtual void  update()    = 0;
     virtual float getX()      = 0;
     virtual float getY()      = 0;

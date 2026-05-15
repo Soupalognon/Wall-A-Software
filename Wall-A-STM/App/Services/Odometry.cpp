@@ -2,19 +2,29 @@
 #include "Config.h"
 #include "stm32f4xx_hal.h"
 #include <cmath>
+#include "Tasks/ExternalComm.h"
 
 extern TIM_HandleTypeDef htim7;
 
-ConcreteOdomHAL::ConcreteOdomHAL(IEncoderHAL* encL, IEncoderHAL* encR)
+Odometry::Odometry(IEncoderHAL* encL, IEncoderHAL* encR)
     : _encL(encL), _encR(encR)
 {
 }
 
-uint32_t ConcreteOdomHAL::getDtFromTimer() {
+bool Odometry::begin() {
+	if(_encL->init()) return 1;
+	if(_encR->init()) return 1;
+
+	HAL_TIM_Base_Start(&htim7);  // TIM7 : compteur 10 µs pour getDtFromTimer()
+
+	return 0;
+}
+
+uint32_t Odometry::getDtFromTimer() {
     return TIM7->CNT;  // 16-bit, 1 tick = 10 µs (prescaler 839, APB1 timer 84 MHz)
 }
 
-void ConcreteOdomHAL::update() {
+void Odometry::update() {
     uint32_t now_10us = getDtFromTimer();
     // uint16_t subtraction : wrap correct même si CNT a débordé (overflow toutes les ~655 ms >> 5 ms)
     uint16_t diff = static_cast<uint16_t>(now_10us) - static_cast<uint16_t>(_lastMicros);
@@ -22,8 +32,8 @@ void ConcreteOdomHAL::update() {
     _dt = (dt > 1e-4f) ? dt : 0.005f;
     _lastMicros = now_10us;
 
-    int32_t curL = _encL->getTicksLeft();
-    int32_t curR = _encR->getTicksRight();
+    int32_t curL = _encL->getTicks();
+    int32_t curR = _encR->getTicks();
     int32_t dTickL = static_cast<int32_t>(static_cast<int16_t>(curL - _prevTicksL));
     int32_t dTickR = static_cast<int32_t>(static_cast<int16_t>(curR - _prevTicksR));
     _prevTicksL = curL;
@@ -48,11 +58,11 @@ void ConcreteOdomHAL::update() {
     _y += dd * sinf(_angle);
 }
 
-float ConcreteOdomHAL::getX()      { return _x; }
-float ConcreteOdomHAL::getY()      { return _y; }
-float ConcreteOdomHAL::getAngle()  { return _angle; }
-float ConcreteOdomHAL::getVLeft()  { return _vL; }
-float ConcreteOdomHAL::getVRight() { return _vR; }
-float ConcreteOdomHAL::getV()      { return _v; }
-float ConcreteOdomHAL::getW()      { return _w; }
-float ConcreteOdomHAL::getDt()     { return _dt; }
+float Odometry::getX()      { return _x; }
+float Odometry::getY()      { return _y; }
+float Odometry::getAngle()  { return _angle; }
+float Odometry::getVLeft()  { return _vL; }
+float Odometry::getVRight() { return _vR; }
+float Odometry::getV()      { return _v; }
+float Odometry::getW()      { return _w; }
+float Odometry::getDt()     { return _dt; }

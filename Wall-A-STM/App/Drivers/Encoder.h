@@ -3,13 +3,13 @@
 
 #pragma once
 #include <cstdint>
-#include <stm32f4xx_hal.h>
+#include "Interfaces/IEncoderHAL.h"
 
-class Encoder {
+class Encoder: public IEncoderHAL {
 public:
-	Encoder() = default;
-	void init(TIM_HandleTypeDef *htim);
-	int32_t refresh(); // extended 32-bit position, must be called regularly (delta < 32767 ticks between calls)
+	Encoder(TIM_HandleTypeDef *htim) : _htim(htim) {};
+	bool init();
+	int32_t getTicks(); // extended 32-bit position, must be called regularly (delta < 32767 ticks between calls)
 
 private:
 	int16_t _oldValue = 0;

@@ -8,6 +8,9 @@ uint32_t& getMockTick();  // defined in FreeRTOSStub.cpp — one instance across
 inline uint32_t HAL_GetTick() { return getMockTick(); }
 inline void setMockTick(uint32_t v) { getMockTick() = v; }
 
+// Minimal UART peripheral stub
+struct UART_HandleTypeDef {};
+
 // Minimal TIM peripheral stub
 struct TIM_TypeDef {
     uint32_t CNT = 0;

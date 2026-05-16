@@ -14,6 +14,8 @@
 #include "Drivers/UartChannel.h"
 #include "Drivers/UsbCdcChannel.h"
 #include "Drivers/Encoder.h"
+#include "Drivers/InternalTemperature.h"
+
 #include "Drivers/Stubs/ProximitySensor.h"
 #include "Drivers/Stubs/TemperatureSensor.h"
 #include "Drivers/Stubs/CurrentSensor.h"
@@ -36,6 +38,9 @@
 extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim8;
+extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc2;
+extern ADC_HandleTypeDef hadc3;
 
 // Static snapshot storage
 ExternalComm::CommSnapshot ExternalComm::latestSnapshot { };
@@ -61,8 +66,10 @@ static UsbCdcChannel usbCh { };
 static Encoder encL { &htim4 }, encR { &htim8 };
 static Odometry odomHAL { &encL, &encR };
 
+static InternalTemperature internalTemperatures { &hadc3 };
+
 static Drv8262 drv { };
-static Motor motorHAL { &drv };
+//static Motor motorHAL { &drv };
 
 static QueueHandle_t cmdMailbox = xQueueCreate(1, sizeof(MoveCmd));
 static QueueHandle_t setpointMailbox = xQueueCreate(1, sizeof(Setpoint));
@@ -84,8 +91,8 @@ static IActuator *actuators[Config::MAX_ACTUATORS] = { &pump, &servo, &linearTra
 static uint8_t actuatorCount = 3;
 static ActuatorManager actuatorMgr { actuators, actuatorCount, nullptr };
 static ExternalComm extComm { &uartCh, &usbCh, nullptr, &actuatorMgr, cmdMailbox };
-static Monitoring monitoring { &extComm };
-static OdoControl odoCtrl { &odomHAL, &motorHAL, &extComm, setpointMailbox };
+static Monitoring monitoring { &extComm, &internalTemperatures };
+static OdoControl odoCtrl { &odomHAL, &drv, &extComm, setpointMailbox };
 static MotionPlanner motionPlanner { &extComm, cmdMailbox, setpointMailbox };
 
 TaskHandle_t motionPlannerHandle = nullptr;
@@ -107,8 +114,8 @@ static void createTask(TaskFunction_t fn, const char *name, uint16_t stack, void
 }
 
 void enable(bool en) {
-    GPIO_PinState state = en ? GPIO_PIN_RESET : GPIO_PIN_SET;
-    HAL_GPIO_WritePin(ENABLE_POWER_SUPPLIES_GPIO_Port, ENABLE_POWER_SUPPLIES_Pin, state);
+	GPIO_PinState state = en ? GPIO_PIN_RESET : GPIO_PIN_SET;
+	HAL_GPIO_WritePin(ENABLE_POWER_SUPPLIES_GPIO_Port, ENABLE_POWER_SUPPLIES_Pin, state);
 }
 
 void SystemInit::boot() {
@@ -125,20 +132,19 @@ void SystemInit::boot() {
 	createTask(MotionPlanner::task, "MoPlan", Config::STACK_MOTION_PLANNER, &motionPlanner,
 		Config::PRIO_MOTION_PLANNER, &motionPlannerHandle);
 
-//	MotionPlanner::handle = motionPlannerHandle;
+	MotionPlanner::handle = motionPlannerHandle;
 
 //	static SensorManager sensorManager { sensors, sensorCount, MotionPlanner::handle, &extComm };
 //	xTaskCreate(SensorManager::task, "SensorMgr", Config::STACK_SENSOR_MANAGER, &sensorManager,
 //		Config::PRIO_SENSOR_MANAGER, nullptr);
-//	xTaskCreate(Monitoring::task, "Monitor", Config::STACK_MONITORING, &monitoring,
-//		Config::PRIO_MONITORING, nullptr);
+	xTaskCreate(Monitoring::task, "Monitor", Config::STACK_MONITORING, &monitoring,
+		Config::PRIO_MONITORING, nullptr);
 
 	HAL_UART_Receive_IT(&huart1, uartIsrBuf, 1);
 
 	createTask(blinkTaskFn, "Blink", configMINIMAL_STACK_SIZE, nullptr, 1, nullptr);
 
 	ExternalComm::log_info("Program start");
-
 
 	enable(true);
 }
@@ -150,4 +156,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 		HAL_UART_Receive_IT(huart, uartIsrBuf, 1);
 		portYIELD_FROM_ISR(woken);
 	}
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+	if (hadc == internalTemperatures.getInstance())
+		internalTemperatures.onConversionComplete();
+//	DriversCustom::MotorTemperatures::onConversionComplete(hadc);
 }

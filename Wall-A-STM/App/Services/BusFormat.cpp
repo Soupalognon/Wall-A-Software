@@ -2,9 +2,15 @@
 #include <cstdint>
 #include <cstdio>
 
-const char* BusFormat::telOdo(float x, float y, float angle) {
+const char* BusFormat::telOdoPose(float x, float y, float angle) {
     static char buf[64];
     snprintf(buf, sizeof(buf), "TEL ODO x:%.2f y:%.2f w:%.2f\n", x, y, angle);
+    return buf;
+}
+
+const char* BusFormat::telOdoVelocity(float v, float w) {
+    static char buf[64];
+    snprintf(buf, sizeof(buf), "TEL ODO v:%.2f w:%.2f\n", v, w);
     return buf;
 }
 

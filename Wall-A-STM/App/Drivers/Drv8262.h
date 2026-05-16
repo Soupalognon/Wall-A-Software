@@ -3,8 +3,9 @@
 
 #pragma once
 #include <cstdint>
+#include "Interfaces/IMotorHAL.h"
 
-class Drv8262 {
+class Drv8262 : public IMotorHAL {
 public:
 	Drv8262() = default;
 

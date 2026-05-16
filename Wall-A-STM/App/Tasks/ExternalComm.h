@@ -49,10 +49,10 @@ public:
     static void txTask(void* arg);
 
 private:
-    struct TxEntry { char buf[80]; };
+    struct TxEntry { char buf[150]; };
 
     struct RxAccum {
-        char     buf[80]{};
+        char     buf[150]{};
         uint16_t itr{};
         uint32_t timer{};
     };

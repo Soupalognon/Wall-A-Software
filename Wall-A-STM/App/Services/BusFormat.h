@@ -5,7 +5,8 @@
 
 class BusFormat {
 public:
-    static const char* telOdo(float x, float y, float angle);
+    static const char* telOdoPose(float x, float y, float angle);
+    static const char* telOdoVelocity(float v, float w);
     static const char* altProximity(float dist);
     static const char* logInfo(const char* msg);
     static const char* logWarn(const char* msg);

@@ -8,6 +8,7 @@ namespace Config {
 
     // Task frequency
     static constexpr uint32_t ODO_FREQ_HZ           = 200;
+    static constexpr uint32_t MONITORING_POLL_HZ     = 10;
 
     // Fixed array bounds (NFR-02 - no dynamic allocation)
     static constexpr uint8_t  MAX_SENSORS            = 15;
@@ -29,7 +30,7 @@ namespace Config {
     static constexpr float    ARRIVAL_THRESHOLD      = 0.02f;
     static constexpr float    PID_I_MAX_SPEED        = 0.5f;
     static constexpr float    PID_I_MAX_ANGLE        = 0.5f;
-    static constexpr float    MAX_DUTY               = 0.1f;
+    static constexpr float    MAX_DUTY               = 0.3f;
     static constexpr float    STALL_DUTY_THRESHOLD   = 0.5f;
     static constexpr float    STALL_SPEED_THRESHOLD  = 0.05f;
     static constexpr uint32_t STALL_TIME_MS          = 500;
@@ -49,13 +50,12 @@ namespace Config {
 
     // Monitoring stale threshold (ms)
     static constexpr uint32_t MONITORING_STALE_MS    = 500;
-    static constexpr uint32_t MONITORING_POLL_MS     = 100;
 
     // FreeRTOS stack sizes (32-bit words on ARM Cortex-M)
     static constexpr uint16_t STACK_ODO_CONTROL      = 512;
     static constexpr uint16_t STACK_MOTION_PLANNER   = 256;
     static constexpr uint16_t STACK_SENSOR_MANAGER   = 256;
-    static constexpr uint16_t STACK_MONITORING       = 256;
+    static constexpr uint16_t STACK_MONITORING       = 512;
     static constexpr uint16_t STACK_EXTCOMM_RX       = 512;
     static constexpr uint16_t STACK_EXTCOMM_TX       = 256;
 

@@ -14,7 +14,7 @@ void OdoControl::task(void *param) {
 	TickType_t lastWake = xTaskGetTickCount();
 	const TickType_t period = pdMS_TO_TICKS(1000 / Config::ODO_FREQ_HZ);
 
-	if(self->_motor->begin() || self->_odom->begin()) {
+	if (self->_motor->begin() || self->_odom->begin()) {
 		ExternalComm::log_error("OdoControl: Init FAILED. Stop task");
 		self->_bus->publish(Topic::ALERT, BusFormat::altInitFailed("OdoControl"));
 		vTaskDelete(NULL);
@@ -23,25 +23,36 @@ void OdoControl::task(void *param) {
 	ExternalComm::log_info("OdoControl: Init OK");
 	for (;;) {
 		vTaskDelayUntil(&lastWake, period);
-		self->tick();
+
+		self->routine();
 	}
 }
 
-void OdoControl::tick() {
+void OdoControl::routine() {
 	++_tickCount;
 
 	_odom->update();
-	float dt = _odom->getDt();
 
 	Setpoint sp { };
 	if (xQueuePeek(_mailbox, &sp, 0) == pdTRUE) {
-		_hasSetpoint = true;
+		//		self->tickPose();
+		tickVelocity(sp);
+	} else {
+		_motor->setMotors(0.0f, 0.0f);
+		//			return;
 	}
 
-	if (!_hasSetpoint) {
-		_motor->setMotors(0.0f, 0.0f);
-		return;
+	if (_tickCount % Config::TELEM_DIVIDER == 0) {
+		latestSnapshot = { _odom->getX(), _odom->getY(), _odom->getAngle(), _odom->getVLeft(),
+			_odom->getVRight(), _odom->getV(), _odom->getW(), _motor->isError(), HAL_GetTick() };
+		//		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(rawV, rawW));
+		//		ExternalComm::log_info("rawV: %.2f, rawW: %.2f / v: %.2f, w: %.2f", rawV, rawW, _odom->getV(), _odom->getW());
+		//		ExternalComm::log_info("leftDuty: %.2f, rightDuty: %.2f / v: %.2f, w: %.2f", leftDuty, rightDuty, _odom->getV(), _odom->getW());
 	}
+}
+
+void OdoControl::tickPose(Setpoint sp) {
+	float dt = _odom->getDt();
 
 	float dx = sp.pose.x - _odom->getX();
 	float dy = sp.pose.y - _odom->getY();
@@ -126,11 +137,39 @@ void OdoControl::tick() {
 	}
 
 	if (_tickCount % Config::TELEM_DIVIDER == 0) {
-		latestSnapshot = { _odom->getX(), _odom->getY(), _odom->getAngle(), _odom->getVLeft(),
-			_odom->getVRight(), rawV, rawW, HAL_GetTick() };
 		_bus->publish(Topic::TELEMETRY,
-			BusFormat::telOdo(_odom->getX(), _odom->getY(), _odom->getAngle()));
+			BusFormat::telOdoPose(_odom->getX(), _odom->getY(), _odom->getAngle()));
 
-		ExternalComm::log_info("v: %ld, w: %ld", (int32_t)(v*1000.0), (int32_t)(w*1000.0));
+		ExternalComm::log_info("rawV: %ld, rawW: %ld / v: %ld, w: %ld", (int32_t) (rawV * 1000.0),
+			(int32_t) (rawW * 1000.0), (int32_t) (v * 1000.0), (int32_t) (w * 1000.0));
+	}
+}
+
+void OdoControl::tickVelocity(Setpoint sp) {
+	float dt = _odom->getDt();
+
+	float dv = sp.velocity.v - _odom->getV();
+	float dw = sp.velocity.w - _odom->getW();
+
+	float v = _pidSpeed.compute(dv, dt);
+	float w = _pidAngle.compute(dw, dt);
+
+//	float rawV = v;
+//	float rawW = w;
+
+	auto clamp = [](float val, float lo, float hi) {
+		return val < lo ? lo : (val > hi ? hi : val);
+	};
+	v = clamp(v, -Config::MAX_DUTY, Config::MAX_DUTY);
+	w = clamp(w, -Config::MAX_DUTY, Config::MAX_DUTY);
+
+	float leftDuty = clamp(v - w, -1.0f, 1.0f);
+	float rightDuty = clamp(v + w, -1.0f, 1.0f);
+	_motor->setMotors(leftDuty, rightDuty);
+
+	if (_tickCount % Config::TELEM_DIVIDER == 0) {
+		//		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(rawV, rawW));
+		//		ExternalComm::log_info("rawV: %.2f, rawW: %.2f / v: %.2f, w: %.2f", rawV, rawW, _odom->getV(), _odom->getW());
+		//		ExternalComm::log_info("leftDuty: %.2f, rightDuty: %.2f / v: %.2f, w: %.2f", leftDuty, rightDuty, _odom->getV(), _odom->getW());
 	}
 }

@@ -148,13 +148,21 @@ void ExternalComm::_processRxLine(const char *line, bool uartSource) {
 	if (strncmp(cmdToken, "CMD", 3) != 0)
 		return;
 
-	if (strncmp(verb, "MOVE", 4) == 0) {
+	if (strcmp(verb, "MOVE_POSE") == 0) {
 		MoveCmd cmd{};
+		cmd.mode = MoveCmdMode::POSE;
 		sscanf(line, "%*s %*s %f %f %f", &cmd.x, &cmd.y, &cmd.angle);
 		xQueueOverwrite(_motionMailbox, &cmd);
-	} else if (strncmp(verb, "STOP", 4) == 0) {
-		xQueueReset(_motionMailbox);
-	} else if (strncmp(verb, "ACTUATOR", 8) == 0) {
+	} else if (strcmp(verb, "MOVE_VEL") == 0) {
+		MoveCmd cmd{};
+		cmd.mode = MoveCmdMode::VELOCITY;
+		sscanf(line, "%*s %*s %f %f", &cmd.v, &cmd.w);
+		xQueueOverwrite(_motionMailbox, &cmd);
+	} else if (strcmp(verb, "MOVE_STOP") == 0) {
+		MoveCmd cmd{};
+		cmd.mode = MoveCmdMode::STOP;
+		xQueueOverwrite(_motionMailbox, &cmd);
+	} else if (strcmp(verb, "ACTUATOR") == 0) {
 		char actorId[16] { }, actCmd[32] { };
 		sscanf(line, "%*s %*s %15s %31s", actorId, actCmd);
 		const char *underscore = strrchr(actorId, '_');

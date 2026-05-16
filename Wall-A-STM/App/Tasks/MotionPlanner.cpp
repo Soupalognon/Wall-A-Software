@@ -6,9 +6,6 @@
 
 TaskHandle_t MotionPlanner::handle = nullptr;
 
-bool doOnce = true;
-uint32_t timer;
-
 MotionPlanner::MotionPlanner(IBus *bus, QueueHandle_t cmdMailbox, QueueHandle_t setpointMailbox) :
 	_bus(bus), _cmdMailbox(cmdMailbox), _setpointMailbox(setpointMailbox) {
 }
@@ -26,19 +23,9 @@ void MotionPlanner::task(void *param) {
 			self->handleAlarm(notifyVal);
 		}
 
-//		if (doOnce && (HAL_GetTick() - timer > 1000)) {
-//			doOnce = false;
-//			MoveCmd cmd { };
-//			cmd.x = 1.0;
-//			cmd.y = 0.0;
-//			cmd.angle = 0;
-//			xQueueOverwrite(self->_cmdMailbox, &cmd);
-//			ExternalComm::log_info("Send it");
-//		}
-
 		MoveCmd cmd { };
 		if (xQueueReceive(self->_cmdMailbox, &cmd, 0) == pdTRUE) {
-			ExternalComm::log_info("cmd received");
+			ExternalComm::log_info("Motion Planner: command received");
 			self->processCmd(cmd);
 		}
 	}
@@ -46,8 +33,20 @@ void MotionPlanner::task(void *param) {
 
 void MotionPlanner::processCmd(const MoveCmd &cmd) {
 	Setpoint sp { };
-	sp.mode = SetpointMode::POSE;
-	sp.pose = { cmd.x, cmd.y, cmd.angle };
+
+	if (cmd.mode == MoveCmdMode::POSE) {
+		sp.mode = SetpointMode::POSE;
+		sp.pose = { cmd.x, cmd.y, cmd.angle };
+	} else if (cmd.mode == MoveCmdMode::VELOCITY) {
+		sp.mode = SetpointMode::POSE;
+		sp.velocity = { cmd.v, cmd.w };
+	} else if (cmd.mode == MoveCmdMode::STOP) {
+		xQueueReset(_setpointMailbox);
+		return;
+	} else {
+		ExternalComm::log_error("Motion Planner: Unknown command mode. Abort command");
+		return;
+	}
 	xQueueOverwrite(_setpointMailbox, &sp);
 }
 

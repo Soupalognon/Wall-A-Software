@@ -8,23 +8,33 @@
 #include <queue.h>
 #include <cstdint>
 
-struct MoveCmd { float x; float y; float angle; };
+enum class MoveCmdMode : uint8_t {
+	POSE, VELOCITY, STOP
+};
+struct MoveCmd {
+	MoveCmdMode mode;
+	float x;
+	float y;
+	float angle;
+	float v;
+	float w;
+};
 
 class MotionPlanner {
 public:
-    static TaskHandle_t handle;  // set by SystemInit after xTaskCreate; nullptr until then
+	static TaskHandle_t handle;  // set by SystemInit after xTaskCreate; nullptr until then
 
-    MotionPlanner(IBus* bus, QueueHandle_t cmdMailbox, QueueHandle_t setpointMailbox);
-    static void task(void* param);
+	MotionPlanner(IBus *bus, QueueHandle_t cmdMailbox, QueueHandle_t setpointMailbox);
+	static void task(void *param);
 
-    // Exposed for unit testing
-    void processCmd(const MoveCmd& cmd);
-    void handleAlarm(uint32_t bitmask);
+	// Exposed for unit testing
+	void processCmd(const MoveCmd &cmd);
+	void handleAlarm(uint32_t bitmask);
 
 private:
-    IBus*         _bus;
-    QueueHandle_t _cmdMailbox;
-    QueueHandle_t _setpointMailbox;
+	IBus *_bus;
+	QueueHandle_t _cmdMailbox;
+	QueueHandle_t _setpointMailbox;
 };
 
 #endif // APP_TASKS_MOTIONPLANNER_H

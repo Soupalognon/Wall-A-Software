@@ -51,7 +51,11 @@ void OdoControl::routine() {
 		tickVelocity(sp);
 	} else {
 		_motor->setMotors(0.0f, 0.0f);
-		//			return;
+		_pidSpeed.reset();
+		_pidAngle.reset();
+		_stallCount = 0;
+		_encFaultCountL = 0;
+		_encFaultCountR = 0;
 	}
 
 	if (_tickCount % Config::TELEM_DIVIDER == 0) {
@@ -160,8 +164,11 @@ void OdoControl::tickVelocity(Setpoint sp) {
 	float dv = sp.velocity.v - _odom->getV();
 	float dw = sp.velocity.w - _odom->getW();
 
-	float v = _pidSpeed.compute(dv, dt);
-	float w = _pidAngle.compute(dw, dt);
+	// Feedforward: directly maps target velocity to an estimated duty cycle (open-loop).
+	// This removes most of the steady-state error before the PID even acts,
+	// allowing much lower PID gains and avoiding integral windup.
+	float v = sp.velocity.v * Config::FF_GAIN + _pidSpeed.compute(dv, dt);
+	float w = sp.velocity.w * Config::FF_GAIN + _pidAngle.compute(dw, dt);
 
 //	float rawV = v;
 //	float rawW = w;
@@ -174,15 +181,13 @@ void OdoControl::tickVelocity(Setpoint sp) {
 
 	float leftDuty = clamp(v - w, -1.0f, 1.0f);
 	float rightDuty = clamp(v + w, -1.0f, 1.0f);
-
-//	float leftDuty = 0.1;
-//	float rightDuty = 0.1;
 	_motor->setMotors(leftDuty, rightDuty);
 
 //	ExternalComm::log_info("leftDuty: %.4f, rightDuty: %.4f", leftDuty, rightDuty);
 //	ExternalComm::log_info("vLeft:%.3f, vRight:%.3f, v:%.3f, w:%.3f", _odom->getVLeft(),
 //		_odom->getVRight(), _odom->getV(), _odom->getW());
-	_bus->publish(Topic::TELEMETRY, BusFormat::telOdoWheelSpeed(_odom->getVLeft(), _odom->getVRight()));
+	_bus->publish(Topic::TELEMETRY, BusFormat::telOdoWheelSpeed(HAL_GetTick(), _odom->getVLeft(), _odom->getVRight()));
+//	_bus->publish(Topic::TELEMETRY, BusFormat::telOdoMotorVoltage(HAL_GetTick(), leftDuty*24.0, rightDuty*24.0));
 
 	if (_tickCount % Config::TELEM_DIVIDER == 0) {
 		//		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(rawV, rawW));

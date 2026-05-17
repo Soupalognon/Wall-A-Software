@@ -43,8 +43,10 @@ void Odometry::update() {
     float dL = Config::ENCODER_L_SIGN * dTickL * Config::D_PER_TICK;
     float dR = Config::ENCODER_R_SIGN * dTickR * Config::D_PER_TICK;
 
-    _vL = dL / _dt;
-    _vR = dR / _dt;
+    // Low-pass filter (EMA) on wheel velocities to reduce encoder quantization noise
+    _vL = Config::VEL_EMA_ALPHA * (dL / _dt) + (1.0f - Config::VEL_EMA_ALPHA) * _vL;
+    _vR = Config::VEL_EMA_ALPHA * (dR / _dt) + (1.0f - Config::VEL_EMA_ALPHA) * _vR;
+
     _v  = (_vL + _vR) * 0.5f;
     _w  = (_vR - _vL) / Config::WHEEL_BASE_M;
 

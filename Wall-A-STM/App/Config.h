@@ -15,8 +15,8 @@ static constexpr uint8_t MAX_SENSORS = 15;
 static constexpr uint8_t MAX_ACTUATORS = 10;
 
 // PID defaults
-static constexpr float PID_KP_DEFAULT = 0.15f;
-static constexpr float PID_KI_DEFAULT = 0.08f;
+static constexpr float PID_KP_DEFAULT = 0.3f;
+static constexpr float PID_KI_DEFAULT = 0.1f;
 static constexpr float PID_KD_DEFAULT = 0.0f;
 
 // Physical odometry constants (adapt to real robot geometry)
@@ -29,9 +29,11 @@ static constexpr float D_PER_TICK = (2.0f * 3.14159265f * WHEEL_RADIUS_M)
 
 // OdoControl tuning constants
 static constexpr float ARRIVAL_THRESHOLD = 0.02f;
-static constexpr float PID_I_MAX_SPEED = 0.5f;
+static constexpr float PID_I_MAX_SPEED = 1.0f;
 static constexpr float PID_I_MAX_ANGLE = 0.5f;
-static constexpr float MAX_DUTY = 0.3f;
+static constexpr float MAX_DUTY = 1.0f;
+static constexpr float VEL_EMA_ALPHA = 0.1f;	//(0=max smooth, 1=no filter)
+static constexpr float FF_GAIN = 0.58f;         // duty per (m/s) — estimated from open-loop data
 static constexpr float STALL_DUTY_THRESHOLD = 0.5f;
 static constexpr float STALL_SPEED_THRESHOLD = 0.05f;
 static constexpr uint32_t STALL_TIME_MS = 500;

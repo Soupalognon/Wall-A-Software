@@ -14,9 +14,15 @@ const char* BusFormat::telOdoVelocity(float v, float w) {
     return buf;
 }
 
-const char* BusFormat::telOdoWheelSpeed(float vLeft, float vRight) {
+const char* BusFormat::telOdoMotorVoltage(uint32_t timestamp, float voltLeft, float voltRight) {
     static char buf[64];
-    snprintf(buf, sizeof(buf), "TEL ODO vLeft:%.3f, vRight:%.3f\r\n", vLeft, vRight);
+    snprintf(buf, sizeof(buf), "TEL ODO time:%ld voltLeft:%.2f voltRight:%.2f\r\n", timestamp, voltLeft, voltRight);
+    return buf;
+}
+
+const char* BusFormat::telOdoWheelSpeed(uint32_t timestamp, float vLeft, float vRight) {
+    static char buf[64];
+    snprintf(buf, sizeof(buf), "TEL ODO time:%ld vLeft:%.3f, vRight:%.3f\r\n", timestamp, vLeft, vRight);
     return buf;
 }
 

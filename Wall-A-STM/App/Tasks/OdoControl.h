@@ -50,6 +50,8 @@ public:
 
 	static void task(void *param);
 
+	static void setPidGains(float P, float I, float D);
+
 private:
 	IOdomHAL *_odom;
 	IMotorHAL *_motor;
@@ -65,6 +67,8 @@ private:
 	uint32_t _stallCount = 0;
 	uint32_t _encFaultCountL = 0;
 	uint32_t _encFaultCountR = 0;
+
+	static OdoControl* _instance;
 
 	void routine();
 	void tickPose(Setpoint sp);

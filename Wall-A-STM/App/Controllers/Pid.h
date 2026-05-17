@@ -6,6 +6,8 @@ public:
     Pid(float kp, float ki, float kd, float iMax);
     float compute(float error, float dt);
     void  reset();
+    void setGains(float P, float I, float D);
+
 private:
     float _kp, _ki, _kd, _iMax;
     float _integral  = 0.0f;

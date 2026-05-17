@@ -5,14 +5,18 @@
 
 OdoControl::OdoSnapshot OdoControl::latestSnapshot { };
 
+OdoControl *OdoControl::_instance = nullptr;
+
 OdoControl::OdoControl(IOdomHAL *odom, IMotorHAL *motor, IBus *bus, QueueHandle_t mailbox) :
 	_odom(odom), _motor(motor), _bus(bus), _mailbox(mailbox) {
+	_instance = this;
 }
 
 void OdoControl::task(void *param) {
 	auto *self = static_cast<OdoControl*>(param);
 	TickType_t lastWake = xTaskGetTickCount();
-	const TickType_t period = pdMS_TO_TICKS(1000 / Config::ODO_FREQ_HZ);
+	const uint32_t periodMs = 1000 / Config::ODO_FREQ_HZ;
+	const TickType_t period = pdMS_TO_TICKS(periodMs);
 
 	if (self->_motor->begin() || self->_odom->begin()) {
 		ExternalComm::log_error("OdoControl: Init FAILED. Stop task");
@@ -21,10 +25,18 @@ void OdoControl::task(void *param) {
 	}
 
 	ExternalComm::log_info("OdoControl: Init OK");
+	uint32_t timer = HAL_GetTick();
 	for (;;) {
 		vTaskDelayUntil(&lastWake, period);
 
 		self->routine();
+
+//		ExternalComm::log_info("duration=%ld", HAL_GetTick() - timer);
+		if ((HAL_GetTick() - timer) > 2 * periodMs) {
+			ExternalComm::log_warn("OdoControl: Task is slowing down => %ld ms",
+				HAL_GetTick() - timer);
+		}
+		timer = HAL_GetTick();
 	}
 }
 
@@ -45,9 +57,6 @@ void OdoControl::routine() {
 	if (_tickCount % Config::TELEM_DIVIDER == 0) {
 		latestSnapshot = { _odom->getX(), _odom->getY(), _odom->getAngle(), _odom->getVLeft(),
 			_odom->getVRight(), _odom->getV(), _odom->getW(), _motor->isError(), HAL_GetTick() };
-		//		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(rawV, rawW));
-		//		ExternalComm::log_info("rawV: %.2f, rawW: %.2f / v: %.2f, w: %.2f", rawV, rawW, _odom->getV(), _odom->getW());
-		//		ExternalComm::log_info("leftDuty: %.2f, rightDuty: %.2f / v: %.2f, w: %.2f", leftDuty, rightDuty, _odom->getV(), _odom->getW());
 	}
 }
 
@@ -165,11 +174,27 @@ void OdoControl::tickVelocity(Setpoint sp) {
 
 	float leftDuty = clamp(v - w, -1.0f, 1.0f);
 	float rightDuty = clamp(v + w, -1.0f, 1.0f);
+
+//	float leftDuty = 0.1;
+//	float rightDuty = 0.1;
 	_motor->setMotors(leftDuty, rightDuty);
+
+//	ExternalComm::log_info("leftDuty: %.4f, rightDuty: %.4f", leftDuty, rightDuty);
+//	ExternalComm::log_info("vLeft:%.3f, vRight:%.3f, v:%.3f, w:%.3f", _odom->getVLeft(),
+//		_odom->getVRight(), _odom->getV(), _odom->getW());
+	_bus->publish(Topic::TELEMETRY, BusFormat::telOdoWheelSpeed(_odom->getVLeft(), _odom->getVRight()));
 
 	if (_tickCount % Config::TELEM_DIVIDER == 0) {
 		//		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(rawV, rawW));
 		//		ExternalComm::log_info("rawV: %.2f, rawW: %.2f / v: %.2f, w: %.2f", rawV, rawW, _odom->getV(), _odom->getW());
 		//		ExternalComm::log_info("leftDuty: %.2f, rightDuty: %.2f / v: %.2f, w: %.2f", leftDuty, rightDuty, _odom->getV(), _odom->getW());
 	}
+}
+
+void OdoControl::setPidGains(float P, float I, float D) {
+	if (_instance == nullptr)
+		return;
+	ExternalComm::log_info("OdoControl: Set new PID gain");
+	_instance->_pidSpeed.setGains(P, I, D);
+	_instance->_pidAngle.setGains(P, I, D);
 }

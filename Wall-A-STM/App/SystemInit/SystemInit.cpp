@@ -15,6 +15,7 @@
 #include "Drivers/UsbCdcChannel.h"
 #include "Drivers/Encoder.h"
 #include "Drivers/InternalTemperature.h"
+#include "Drivers/MotorCurrentSense.h"
 
 #include "Drivers/Stubs/ProximitySensor.h"
 #include "Drivers/Stubs/TemperatureSensor.h"
@@ -35,9 +36,11 @@
 
 #include "cmsis_os2.h"
 
+extern USBD_HandleTypeDef hUsbDeviceFS;
 extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim8;
+extern TIM_HandleTypeDef htim10;
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern ADC_HandleTypeDef hadc3;
@@ -61,12 +64,13 @@ struct StubActuatorHAL: public IActuatorHAL {
 } // namespace
 
 static UartChannel uartCh { &huart1 };
-static UsbCdcChannel usbCh { };
+static UsbCdcChannel usbCh { &hUsbDeviceFS };
 
 static Encoder encL { &htim4 }, encR { &htim8 };
 static Odometry odomHAL { &encL, &encR };
 
 static InternalTemperature internalTemperatures { &hadc3 };
+static MotorCurrentSense motorCurrentSense { &hadc1 };
 
 static Drv8262 drv { };
 //static Motor motorHAL { &drv };
@@ -91,7 +95,7 @@ static IActuator *actuators[Config::MAX_ACTUATORS] = { &pump, &servo, &linearTra
 static uint8_t actuatorCount = 3;
 static ActuatorManager actuatorMgr { actuators, actuatorCount, nullptr };
 static ExternalComm extComm { &uartCh, &usbCh, nullptr, &actuatorMgr, cmdMailbox };
-static Monitoring monitoring { &extComm, &internalTemperatures };
+static Monitoring monitoring { &extComm, &internalTemperatures, &motorCurrentSense };
 static OdoControl odoCtrl { &odomHAL, &drv, &extComm, setpointMailbox };
 static MotionPlanner motionPlanner { &extComm, cmdMailbox, setpointMailbox };
 
@@ -118,6 +122,7 @@ void enable(bool en) {
 	HAL_GPIO_WritePin(ENABLE_POWER_SUPPLIES_GPIO_Port, ENABLE_POWER_SUPPLIES_Pin, state);
 }
 
+volatile unsigned long ulHighFrequencyTimerTicks;
 void SystemInit::boot() {
 	SensorManager::latestSnapshot = { };
 	OdoControl::latestSnapshot = { };
@@ -161,5 +166,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 	if (hadc == internalTemperatures.getInstance())
 		internalTemperatures.onConversionComplete();
-//	DriversCustom::MotorTemperatures::onConversionComplete(hadc);
+	else if (hadc == motorCurrentSense.getInstance())
+		motorCurrentSense.onConversionComplete();
 }

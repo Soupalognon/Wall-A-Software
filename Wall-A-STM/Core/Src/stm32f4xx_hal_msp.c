@@ -286,82 +286,6 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
 }
 
 /**
-  * @brief CAN MSP Initialization
-  * This function configures the hardware resources used in this example
-  * @param hcan: CAN handle pointer
-  * @retval None
-  */
-void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(hcan->Instance==CAN1)
-  {
-    /* USER CODE BEGIN CAN1_MspInit 0 */
-
-    /* USER CODE END CAN1_MspInit 0 */
-    /* Peripheral clock enable */
-    __HAL_RCC_CAN1_CLK_ENABLE();
-
-    __HAL_RCC_GPIOH_CLK_ENABLE();
-    __HAL_RCC_GPIOD_CLK_ENABLE();
-    /**CAN1 GPIO Configuration
-    PH13     ------> CAN1_TX
-    PD0     ------> CAN1_RX
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_13;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF9_CAN1;
-    HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = GPIO_PIN_0;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF9_CAN1;
-    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-    /* USER CODE BEGIN CAN1_MspInit 1 */
-
-    /* USER CODE END CAN1_MspInit 1 */
-
-  }
-
-}
-
-/**
-  * @brief CAN MSP De-Initialization
-  * This function freeze the hardware resources used in this example
-  * @param hcan: CAN handle pointer
-  * @retval None
-  */
-void HAL_CAN_MspDeInit(CAN_HandleTypeDef* hcan)
-{
-  if(hcan->Instance==CAN1)
-  {
-    /* USER CODE BEGIN CAN1_MspDeInit 0 */
-
-    /* USER CODE END CAN1_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_CAN1_CLK_DISABLE();
-
-    /**CAN1 GPIO Configuration
-    PH13     ------> CAN1_TX
-    PD0     ------> CAN1_RX
-    */
-    HAL_GPIO_DeInit(GPIOH, GPIO_PIN_13);
-
-    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_0);
-
-    /* USER CODE BEGIN CAN1_MspDeInit 1 */
-
-    /* USER CODE END CAN1_MspDeInit 1 */
-  }
-
-}
-
-/**
   * @brief I2C MSP Initialization
   * This function configures the hardware resources used in this example
   * @param hi2c: I2C handle pointer
@@ -512,6 +436,9 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
     /* USER CODE END TIM1_MspInit 0 */
     /* Peripheral clock enable */
     __HAL_RCC_TIM1_CLK_ENABLE();
+    /* TIM1 interrupt Init */
+    HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
     /* USER CODE BEGIN TIM1_MspInit 1 */
 
     /* USER CODE END TIM1_MspInit 1 */
@@ -766,6 +693,9 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
     /* USER CODE END TIM1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_TIM1_CLK_DISABLE();
+
+    /* TIM1 interrupt DeInit */
+    HAL_NVIC_DisableIRQ(TIM1_UP_TIM10_IRQn);
     /* USER CODE BEGIN TIM1_MspDeInit 1 */
 
     /* USER CODE END TIM1_MspDeInit 1 */

@@ -16,3 +16,9 @@ void Pid::reset() {
     _integral  = 0.0f;
     _prevError = 0.0f;
 }
+
+void Pid::setGains(float P, float I, float D) {
+	_kp = P;
+	_ki = I;
+	_kd = D;
+}

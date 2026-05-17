@@ -78,7 +78,7 @@ private:
     QueueHandle_t _queueForTopic(Topic t) const;
     void _processRxLine(const char* line, bool uartSource);
     void _feedAccum(RxAccum& acc, const char* data, uint16_t len, bool uartSource);
-    void _transmitAll(const char* msg, uint16_t len);
+    void _transmitAll(const char* msg, uint16_t len, bool includeUsb);
 };
 
 #endif // APP_TASKS_EXTERNALCOMM_H

@@ -1,21 +1,22 @@
 #include "Tasks/ExternalComm.h"
 #include "Tasks/MotionPlanner.h"
+#include "Tasks/OdoControl.h"
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <stm32f4xx_hal.h>
 
-ExternalComm* ExternalComm::_instance = nullptr;
+ExternalComm *ExternalComm::_instance = nullptr;
 
 ExternalComm::ExternalComm(ICommChannel *uart, ICommChannel *usb, ICommChannel *eth,
 	IActuatorManager *actuatorMgr, QueueHandle_t motionMailbox) :
 	_uart(uart), _usb(usb), _eth(eth), _actuatorMgr(actuatorMgr), _motionMailbox(motionMailbox) {
 	_rxByteQueue = xQueueCreate(64, sizeof(uint8_t));
-	_telQueue    = xQueueCreate(1, sizeof(TxEntry));
-	_altQueue    = xQueueCreate(1, sizeof(TxEntry));
-	_hltQueue    = xQueueCreate(2, sizeof(TxEntry));
-	_logQueue    = xQueueCreate(4, sizeof(TxEntry));
+	_telQueue = xQueueCreate(1, sizeof(TxEntry));
+	_altQueue = xQueueCreate(1, sizeof(TxEntry));
+	_hltQueue = xQueueCreate(2, sizeof(TxEntry));
+	_logQueue = xQueueCreate(4, sizeof(TxEntry));
 
 	_txQueueSet = xQueueCreateSet(1 + 1 + 2 + 4);
 	xQueueAddToSet(_telQueue, _txQueueSet);
@@ -26,24 +27,39 @@ ExternalComm::ExternalComm(ICommChannel *uart, ICommChannel *usb, ICommChannel *
 	_instance = this;
 }
 
-void ExternalComm::_logImpl(const char* prefix, const char* fmt, va_list args)
-{
-	if (_instance == nullptr) return;
-	TxEntry entry{};
+void ExternalComm::_logImpl(const char *prefix, const char *fmt, va_list args) {
+	if (_instance == nullptr)
+		return;
+	TxEntry entry { };
 	size_t plen = strlen(prefix);
 	memcpy(entry.buf, prefix, plen);
 	std::vsnprintf(entry.buf + plen, sizeof(entry.buf) - plen - 1, fmt, args);
-	size_t len = strnlen(entry.buf, sizeof(entry.buf) - 2);  // max 78 so [len]='\n' and [len+1]='\0' are in-bounds
+	size_t len = strnlen(entry.buf, sizeof(entry.buf) - 2); // max 78 so [len]='\n' and [len+1]='\0' are in-bounds
 	if (len == 0 || entry.buf[len - 1] != '\n') {
-		entry.buf[len]     = '\n';
+		entry.buf[len] = '\n';
 		entry.buf[len + 1] = '\0';
 	}
 	_instance->publish(Topic::LOG, entry.buf);
 }
 
-void ExternalComm::log_info(const char* fmt, ...) { va_list a; va_start(a, fmt); _logImpl("I ", fmt, a); va_end(a); }
-void ExternalComm::log_warn(const char* fmt, ...) { va_list a; va_start(a, fmt); _logImpl("W ", fmt, a); va_end(a); }
-void ExternalComm::log_error(const char* fmt, ...) { va_list a; va_start(a, fmt); _logImpl("E ", fmt, a); va_end(a); }
+void ExternalComm::log_info(const char *fmt, ...) {
+	va_list a;
+	va_start(a, fmt);
+	_logImpl("I ", fmt, a);
+	va_end(a);
+}
+void ExternalComm::log_warn(const char *fmt, ...) {
+	va_list a;
+	va_start(a, fmt);
+	_logImpl("W ", fmt, a);
+	va_end(a);
+}
+void ExternalComm::log_error(const char *fmt, ...) {
+	va_list a;
+	va_start(a, fmt);
+	_logImpl("E ", fmt, a);
+	va_end(a);
+}
 
 QueueHandle_t ExternalComm::_queueForTopic(Topic t) const {
 	switch (t) {
@@ -92,7 +108,7 @@ void ExternalComm::txTask(void *arg) {
 		QueueHandle_t q = xQueueSelectFromSet(self->_txQueueSet, portMAX_DELAY);
 		if (q != nullptr && xQueueReceive(q, &entry, 0) == pdTRUE) {
 			uint16_t len = static_cast<uint16_t>(strlen(entry.buf));
-			self->_transmitAll(entry.buf, len);
+			self->_transmitAll(entry.buf, len, q != self->_logQueue);
 		}
 	}
 }
@@ -149,17 +165,17 @@ void ExternalComm::_processRxLine(const char *line, bool uartSource) {
 		return;
 
 	if (strcmp(verb, "MOVE_POSE") == 0) {
-		MoveCmd cmd{};
+		MoveCmd cmd { };
 		cmd.mode = MoveCmdMode::POSE;
 		sscanf(line, "%*s %*s %f %f %f", &cmd.x, &cmd.y, &cmd.angle);
 		xQueueOverwrite(_motionMailbox, &cmd);
 	} else if (strcmp(verb, "MOVE_VEL") == 0) {
-		MoveCmd cmd{};
+		MoveCmd cmd { };
 		cmd.mode = MoveCmdMode::VELOCITY;
 		sscanf(line, "%*s %*s %f %f", &cmd.v, &cmd.w);
 		xQueueOverwrite(_motionMailbox, &cmd);
 	} else if (strcmp(verb, "MOVE_STOP") == 0) {
-		MoveCmd cmd{};
+		MoveCmd cmd { };
 		cmd.mode = MoveCmdMode::STOP;
 		xQueueOverwrite(_motionMailbox, &cmd);
 	} else if (strcmp(verb, "ACTUATOR") == 0) {
@@ -169,6 +185,10 @@ void ExternalComm::_processRxLine(const char *line, bool uartSource) {
 		uint8_t id = underscore ? static_cast<uint8_t>(atoi(underscore + 1)) : 0;
 		if (_actuatorMgr)
 			_actuatorMgr->commandById(id, actCmd);
+	} else if (strcmp(verb, "PID") == 0) {
+		float P = 0.0f, I = 0.0f, D = 0.0f;
+		sscanf(line, "%*s %*s P:%f I:%f D:%f", &P, &I, &D);
+		OdoControl::setPidGains(P, I, D);
 	} else {
 		publish(Topic::LOG, line);
 	}
@@ -179,11 +199,11 @@ void ExternalComm::_processRxLine(const char *line, bool uartSource) {
 	latestSnapshot.timestamp = HAL_GetTick();
 }
 
-void ExternalComm::_transmitAll(const char *msg, uint16_t len) {
-	if (_usb)
+void ExternalComm::_transmitAll(const char *msg, uint16_t len, bool includeUsb) {
+	if (includeUsb && _usb)
 		_usb->transmit(msg, len);
-	if (_eth)
-		_eth->transmit(msg, len);
+//	if (_eth)
+//		_eth->transmit(msg, len);
 	if (_uart)
 		_uart->transmit(msg, len);
 }

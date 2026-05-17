@@ -53,6 +53,7 @@ void BusFault_Handler(void);
 void UsageFault_Handler(void);
 void DebugMon_Handler(void);
 void ADC_IRQHandler(void);
+void TIM1_UP_TIM10_IRQHandler(void);
 void USART1_IRQHandler(void);
 void TIM6_DAC_IRQHandler(void);
 void ETH_IRQHandler(void);

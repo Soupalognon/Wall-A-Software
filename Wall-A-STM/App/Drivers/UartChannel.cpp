@@ -4,8 +4,8 @@ UartChannel::UartChannel(UART_HandleTypeDef *h) :
 	_huart(h) {
 }
 
-void UartChannel::transmit(const char *data, uint16_t len) {
-	HAL_UART_Transmit(_huart, reinterpret_cast<const uint8_t*>(data), len, 100);
+HAL_StatusTypeDef UartChannel::transmit(const char *data, uint16_t len) {
+	return HAL_UART_Transmit(_huart, reinterpret_cast<const uint8_t*>(data), len, 100);
 }
 
 uint16_t UartChannel::receive(char *buf, uint16_t maxLen, uint32_t /*timeoutMs*/) {

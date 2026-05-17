@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * File Name          : freertos.c
-  * Description        : Code for freertos applications
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * File Name          : freertos.c
+ * Description        : Code for freertos applications
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -52,14 +52,30 @@
 /* USER CODE END FunctionPrototypes */
 
 /* Hook prototypes */
+void configureTimerForRunTimeStats(void);
+unsigned long getRunTimeCounterValue(void);
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
 
+/* USER CODE BEGIN 1 */
+/* Functions needed when configGENERATE_RUN_TIME_STATS is on */
+extern volatile unsigned long ulHighFrequencyTimerTicks;
+
+void configureTimerForRunTimeStats(void) {
+	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+	DWT->CTRL |= 1;
+	DWT->CYCCNT = 0;
+}
+
+unsigned long getRunTimeCounterValue(void) {
+	return DWT->CYCCNT;
+}
+/* USER CODE END 1 */
+
 /* USER CODE BEGIN 4 */
-void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
-{
-   /* Run time stack overflow checking is performed if
-   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
-   called if a stack overflow is detected. */
+void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName) {
+	/* Run time stack overflow checking is performed if
+	 configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
+	 called if a stack overflow is detected. */
 }
 /* USER CODE END 4 */
 

@@ -34,6 +34,7 @@ void Odometry::update() {
 
     int32_t curL = _encL->getTicks();
     int32_t curR = _encR->getTicks();
+//    ExternalComm::log_info("curL:%ld, curR:%ld", curL, curR);
     int32_t dTickL = static_cast<int32_t>(static_cast<int16_t>(curL - _prevTicksL));
     int32_t dTickR = static_cast<int32_t>(static_cast<int16_t>(curR - _prevTicksR));
     _prevTicksL = curL;

@@ -47,8 +47,6 @@ ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 ADC_HandleTypeDef hadc3;
 
-CAN_HandleTypeDef hcan1;
-
 I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi2;
@@ -82,7 +80,6 @@ static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_ADC3_Init(void);
-static void MX_CAN1_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_TIM1_Init(void);
@@ -103,7 +100,6 @@ void StartDefaultTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -138,7 +134,6 @@ int main(void)
   MX_ADC1_Init();
   MX_ADC2_Init();
   MX_ADC3_Init();
-  MX_CAN1_Init();
   MX_I2C1_Init();
   MX_SPI2_Init();
   MX_TIM1_Init();
@@ -410,43 +405,6 @@ static void MX_ADC3_Init(void)
   /* USER CODE BEGIN ADC3_Init 2 */
 
   /* USER CODE END ADC3_Init 2 */
-
-}
-
-/**
-  * @brief CAN1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_CAN1_Init(void)
-{
-
-  /* USER CODE BEGIN CAN1_Init 0 */
-
-  /* USER CODE END CAN1_Init 0 */
-
-  /* USER CODE BEGIN CAN1_Init 1 */
-
-  /* USER CODE END CAN1_Init 1 */
-  hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 16;
-  hcan1.Init.Mode = CAN_MODE_NORMAL;
-  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
-  hcan1.Init.TimeTriggeredMode = DISABLE;
-  hcan1.Init.AutoBusOff = DISABLE;
-  hcan1.Init.AutoWakeUp = DISABLE;
-  hcan1.Init.AutoRetransmission = DISABLE;
-  hcan1.Init.ReceiveFifoLocked = DISABLE;
-  hcan1.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CAN1_Init 2 */
-
-  /* USER CODE END CAN1_Init 2 */
 
 }
 
@@ -938,7 +896,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 250000;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;

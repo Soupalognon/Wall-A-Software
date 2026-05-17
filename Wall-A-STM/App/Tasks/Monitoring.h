@@ -6,6 +6,7 @@
 #include "Tasks/ExternalComm.h"
 #include "Interfaces/IBus.h"
 #include "Drivers/InternalTemperature.h"
+#include "Drivers/MotorCurrentSense.h"
 #include "Services/BusFormat.h"
 #include "Config.h"
 #include <FreeRTOS.h>
@@ -14,7 +15,7 @@
 
 class Monitoring {
 public:
-	Monitoring(IBus *bus, InternalTemperature* internalTemp);
+	Monitoring(IBus *bus, InternalTemperature* internalTemp, MotorCurrentSense* motorCurrentSense);
 	static void task(void *param);
 	void checkOnce();
 
@@ -23,6 +24,7 @@ public:
 private:
 	IBus *_bus;
 	InternalTemperature* _internalTemperatures;
+	MotorCurrentSense* _motorCurrentSense;
 
 };
 

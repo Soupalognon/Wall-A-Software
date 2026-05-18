@@ -6,3 +6,4 @@ Release/
 .claude/skills/
 _bmad/
 Wall-A-STM/Tests/build/
+*.pyc

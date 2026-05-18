@@ -51,6 +51,8 @@ public:
 	static void task(void *param);
 
 	static void setPidGains(float P, float I, float D);
+	static void setPidSpeedGains(float P, float I, float D);
+	static void setPidAngleGains(float P, float I, float D);
 
 private:
 	IOdomHAL *_odom;
@@ -60,7 +62,7 @@ private:
 
 	Pid _pidSpeed { Config::PID_KP_DEFAULT, Config::PID_KI_DEFAULT, Config::PID_KD_DEFAULT,
 		Config::PID_I_MAX_SPEED };
-	Pid _pidAngle { Config::PID_KP_DEFAULT, Config::PID_KI_DEFAULT, Config::PID_KD_DEFAULT,
+	Pid _pidAngle { Config::PID_KP_ANGLE_DEFAULT, Config::PID_KI_ANGLE_DEFAULT, Config::PID_KD_ANGLE_DEFAULT,
 		Config::PID_I_MAX_ANGLE };
 
 	uint32_t _tickCount = 0;

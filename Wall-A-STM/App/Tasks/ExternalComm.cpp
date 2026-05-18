@@ -189,6 +189,14 @@ void ExternalComm::_processRxLine(const char *line, bool uartSource) {
 		float P = 0.0f, I = 0.0f, D = 0.0f;
 		sscanf(line, "%*s %*s P:%f I:%f D:%f", &P, &I, &D);
 		OdoControl::setPidGains(P, I, D);
+	} else if (strcmp(verb, "PID_SPEED") == 0) {
+		float P = 0.0f, I = 0.0f, D = 0.0f;
+		sscanf(line, "%*s %*s P:%f I:%f D:%f", &P, &I, &D);
+		OdoControl::setPidSpeedGains(P, I, D);
+	} else if (strcmp(verb, "PID_ANGLE") == 0) {
+		float P = 0.0f, I = 0.0f, D = 0.0f;
+		sscanf(line, "%*s %*s P:%f I:%f D:%f", &P, &I, &D);
+		OdoControl::setPidAngleGains(P, I, D);
 	} else {
 		publish(Topic::LOG, line);
 	}

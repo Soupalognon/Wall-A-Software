@@ -5,8 +5,8 @@
 
 class BusFormat {
 public:
-    static const char* telOdoPose(float x, float y, float angle);
-    static const char* telOdoVelocity(float v, float w);
+    static const char* telOdoPose(uint32_t timestamp, float x, float y, float angle);
+    static const char* telOdoVelocity(uint32_t timestamp, float v, float w);
     static const char* telOdoMotorVoltage(uint32_t timestamp, float voltLeft, float voltRight);
     static const char* telOdoWheelSpeed(uint32_t timestamp, float vLeft, float vRight);
     static const char* altProximity(float dist);

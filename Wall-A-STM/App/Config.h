@@ -14,10 +14,15 @@ static constexpr uint32_t MONITORING_POLL_HZ = 10;
 static constexpr uint8_t MAX_SENSORS = 15;
 static constexpr uint8_t MAX_ACTUATORS = 10;
 
-// PID defaults
+// PID defaults — speed (linear velocity)
 static constexpr float PID_KP_DEFAULT = 0.3f;
 static constexpr float PID_KI_DEFAULT = 0.1f;
 static constexpr float PID_KD_DEFAULT = 0.0f;
+
+// PID defaults — angle (angular velocity)
+static constexpr float PID_KP_ANGLE_DEFAULT = 0.6f;
+static constexpr float PID_KI_ANGLE_DEFAULT = 0.1f;
+static constexpr float PID_KD_ANGLE_DEFAULT = 0.01f;
 
 // Physical odometry constants (adapt to real robot geometry)
 static constexpr float WHEEL_RADIUS_M = 0.0381f;
@@ -33,7 +38,8 @@ static constexpr float PID_I_MAX_SPEED = 1.0f;
 static constexpr float PID_I_MAX_ANGLE = 0.5f;
 static constexpr float MAX_DUTY = 1.0f;
 static constexpr float VEL_EMA_ALPHA = 0.1f;	//(0=max smooth, 1=no filter)
-static constexpr float FF_GAIN = 0.58f;         // duty per (m/s) — estimated from open-loop data
+static constexpr float FF_GAIN_V = 0.58f;        // duty per (m/s)  — estimated from open-loop data
+static constexpr float FF_GAIN_W = FF_GAIN_V * WHEEL_BASE_M / 2.0f; // duty per (rad/s) — derived from FF_GAIN_V
 static constexpr float STALL_DUTY_THRESHOLD = 0.5f;
 static constexpr float STALL_SPEED_THRESHOLD = 0.05f;
 static constexpr uint32_t STALL_TIME_MS = 500;

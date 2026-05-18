@@ -163,6 +163,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	}
 }
 
+void USB_CDC_RxHandler(uint8_t *Buf, uint32_t Len) {
+	BaseType_t woken = pdFALSE;
+	for (uint32_t i = 0; i < Len; i++)
+		xQueueSendFromISR(extComm.rxByteQueue(), &Buf[i], &woken);
+	portYIELD_FROM_ISR(woken);
+}
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 	if (hadc == internalTemperatures.getInstance())
 		internalTemperatures.onConversionComplete();

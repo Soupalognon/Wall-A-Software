@@ -151,7 +151,7 @@ void OdoControl::tickPose(Setpoint sp) {
 
 	if (_tickCount % Config::TELEM_DIVIDER == 0) {
 		_bus->publish(Topic::TELEMETRY,
-			BusFormat::telOdoPose(_odom->getX(), _odom->getY(), _odom->getAngle()));
+			BusFormat::telOdoPose(HAL_GetTick(), _odom->getX(), _odom->getY(), _odom->getAngle()));
 
 		ExternalComm::log_info("rawV: %ld, rawW: %ld / v: %ld, w: %ld", (int32_t) (rawV * 1000.0),
 			(int32_t) (rawW * 1000.0), (int32_t) (v * 1000.0), (int32_t) (w * 1000.0));
@@ -167,8 +167,8 @@ void OdoControl::tickVelocity(Setpoint sp) {
 	// Feedforward: directly maps target velocity to an estimated duty cycle (open-loop).
 	// This removes most of the steady-state error before the PID even acts,
 	// allowing much lower PID gains and avoiding integral windup.
-	float v = sp.velocity.v * Config::FF_GAIN + _pidSpeed.compute(dv, dt);
-	float w = sp.velocity.w * Config::FF_GAIN + _pidAngle.compute(dw, dt);
+	float v = sp.velocity.v * Config::FF_GAIN_V + _pidSpeed.compute(dv, dt);
+	float w = sp.velocity.w * Config::FF_GAIN_W + _pidAngle.compute(dw, dt);
 
 //	float rawV = v;
 //	float rawW = w;
@@ -186,7 +186,8 @@ void OdoControl::tickVelocity(Setpoint sp) {
 //	ExternalComm::log_info("leftDuty: %.4f, rightDuty: %.4f", leftDuty, rightDuty);
 //	ExternalComm::log_info("vLeft:%.3f, vRight:%.3f, v:%.3f, w:%.3f", _odom->getVLeft(),
 //		_odom->getVRight(), _odom->getV(), _odom->getW());
-	_bus->publish(Topic::TELEMETRY, BusFormat::telOdoWheelSpeed(HAL_GetTick(), _odom->getVLeft(), _odom->getVRight()));
+//	_bus->publish(Topic::TELEMETRY, BusFormat::telOdoWheelSpeed(HAL_GetTick(), _odom->getVLeft(), _odom->getVRight()));
+	_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
 //	_bus->publish(Topic::TELEMETRY, BusFormat::telOdoMotorVoltage(HAL_GetTick(), leftDuty*24.0, rightDuty*24.0));
 
 	if (_tickCount % Config::TELEM_DIVIDER == 0) {
@@ -199,7 +200,21 @@ void OdoControl::tickVelocity(Setpoint sp) {
 void OdoControl::setPidGains(float P, float I, float D) {
 	if (_instance == nullptr)
 		return;
-	ExternalComm::log_info("OdoControl: Set new PID gain");
+	ExternalComm::log_info("OdoControl: Set PID gains (speed + angle)");
 	_instance->_pidSpeed.setGains(P, I, D);
+	_instance->_pidAngle.setGains(P, I, D);
+}
+
+void OdoControl::setPidSpeedGains(float P, float I, float D) {
+	if (_instance == nullptr)
+		return;
+	ExternalComm::log_info("OdoControl: Set PID speed gains");
+	_instance->_pidSpeed.setGains(P, I, D);
+}
+
+void OdoControl::setPidAngleGains(float P, float I, float D) {
+	if (_instance == nullptr)
+		return;
+	ExternalComm::log_info("OdoControl: Set PID angle gains");
 	_instance->_pidAngle.setGains(P, I, D);
 }

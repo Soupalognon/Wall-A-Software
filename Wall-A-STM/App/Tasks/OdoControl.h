@@ -65,6 +65,9 @@ private:
 	Pid _pidAngle { Config::PID_KP_ANGLE_DEFAULT, Config::PID_KI_ANGLE_DEFAULT, Config::PID_KD_ANGLE_DEFAULT,
 		Config::PID_I_MAX_ANGLE };
 
+	float _spFilteredV = 0.0f;
+	float _spFilteredW = 0.0f;
+
 	uint32_t _tickCount = 0;
 	uint32_t _stallCount = 0;
 	uint32_t _encFaultCountL = 0;

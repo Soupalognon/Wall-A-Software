@@ -7,5 +7,5 @@ PLOT_WINDOW = 3  # secondes visibles sur le graphe (fenêtre glissante)
 # Plages des sliders MOVE_VEL
 VEL_V_MIN = -1.8   # m/s
 VEL_V_MAX =  1.8   # m/s
-VEL_W_MIN = -3.0   # rad/s
-VEL_W_MAX =  3.0   # rad/s
+VEL_W_MIN = -20.0   # rad/s
+VEL_W_MAX =  20.0   # rad/s

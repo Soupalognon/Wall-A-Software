@@ -51,3 +51,11 @@ TEST(PidTest, ZeroError_ZeroOutput) {
     float out = pid.compute(0.0f, 0.005f);
     EXPECT_FLOAT_EQ(0.0f, out);
 }
+
+TEST(PidTest, DerivativeOnMeasurement_NoKickOnSetpointStep) {
+    Pid pid{0.0f, 0.0f, 1.0f, 10.0f};
+    float out1 = pid.compute(0.0f, 0.0f, 0.1f);
+    float out2 = pid.compute(5.0f, 0.0f, 0.1f);  // error steps, measurement stays 0
+    EXPECT_FLOAT_EQ(0.0f, out1);
+    EXPECT_FLOAT_EQ(0.0f, out2);  // no derivative kick
+}

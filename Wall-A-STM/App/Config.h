@@ -38,6 +38,8 @@ static constexpr float PID_I_MAX_SPEED = 1.0f;
 static constexpr float PID_I_MAX_ANGLE = 0.5f;
 static constexpr float MAX_DUTY = 1.0f;
 static constexpr float VEL_EMA_ALPHA = 0.1f;	//(0=max smooth, 1=no filter)
+static constexpr float SPEED_EMA_ALPHA = 0.15f;	//setpoint smoothing (0=max smooth, 1=no filter)
+static constexpr float ANGLE_EMA_ALPHA = 0.05f;	//setpoint smoothing (0=max smooth, 1=no filter)
 static constexpr float FF_GAIN_V = 0.58f;        // duty per (m/s)  — estimated from open-loop data
 static constexpr float FF_GAIN_W = FF_GAIN_V * WHEEL_BASE_M / 2.0f; // duty per (rad/s) — derived from FF_GAIN_V
 static constexpr float STALL_DUTY_THRESHOLD = 0.5f;

@@ -12,9 +12,19 @@ float Pid::compute(float error, float dt) {
     return _kp * error + _ki * _integral + _kd * derivative;
 }
 
+float Pid::compute(float error, float measurement, float dt) {
+    _integral += error * dt;
+    if (_integral >  _iMax) _integral =  _iMax;
+    if (_integral < -_iMax) _integral = -_iMax;
+    float derivative = (dt > 1e-9f) ? -(measurement - _prevMeasurement) / dt : 0.0f;
+    _prevMeasurement = measurement;
+    return _kp * error + _ki * _integral + _kd * derivative;
+}
+
 void Pid::reset() {
-    _integral  = 0.0f;
-    _prevError = 0.0f;
+    _integral        = 0.0f;
+    _prevError       = 0.0f;
+    _prevMeasurement = 0.0f;
 }
 
 void Pid::setGains(float P, float I, float D) {

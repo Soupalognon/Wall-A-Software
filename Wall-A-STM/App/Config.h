@@ -62,6 +62,10 @@ static constexpr float CURRENT_ALARM_A = 2.0f;
 // Monitoring stale threshold (ms)
 static constexpr uint32_t MONITORING_STALE_MS = 500;
 
+// Command watchdog — reset setpoint to 0 if no command received within timeout
+static constexpr bool CMD_WATCHDOG_ENABLED = true;
+static constexpr uint32_t CMD_WATCHDOG_TIMEOUT_MS = 1000;
+
 // FreeRTOS stack sizes (32-bit words on ARM Cortex-M)
 static constexpr uint16_t STACK_ODO_CONTROL = 512;
 static constexpr uint16_t STACK_MOTION_PLANNER = 256;

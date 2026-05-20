@@ -13,7 +13,12 @@ MotionPlanner::MotionPlanner(IBus *bus, QueueHandle_t cmdMailbox, QueueHandle_t 
 void MotionPlanner::task(void *param) {
 	auto *self = static_cast<MotionPlanner*>(param);
 
+	if (Config::CMD_WATCHDOG_ENABLED)
+		ExternalComm::log_warn("MotionPlanner: Watchdog command enabled");
+
 	ExternalComm::log_info("MotionPlanner: Init OK");
+
+	uint32_t lastCmdTick = HAL_GetTick();
 
 	for (;;) {
 		uint32_t notifyVal = 0;
@@ -26,7 +31,14 @@ void MotionPlanner::task(void *param) {
 		MoveCmd cmd { };
 		if (xQueueReceive(self->_cmdMailbox, &cmd, 0) == pdTRUE) {
 			ExternalComm::log_info("Motion Planner: command received");
+			lastCmdTick = HAL_GetTick();
 			self->processCmd(cmd);
+		} else if (Config::CMD_WATCHDOG_ENABLED
+			&& (HAL_GetTick() - lastCmdTick) >= Config::CMD_WATCHDOG_TIMEOUT_MS
+			&& uxQueueMessagesWaiting(self->_setpointMailbox) > 0) {
+			ExternalComm::log_warn("No command received in the %ld ms. Stop motors",
+				Config::CMD_WATCHDOG_TIMEOUT_MS);
+			xQueueReset(self->_setpointMailbox);
 		}
 	}
 }

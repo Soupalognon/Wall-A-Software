@@ -11,6 +11,7 @@ MotionPlanner::MotionPlanner(IBus *bus, QueueHandle_t cmdMailbox, QueueHandle_t 
 }
 
 void MotionPlanner::task(void *param) {
+	MotionPlanner::handle = xTaskGetCurrentTaskHandle();
 	auto *self = static_cast<MotionPlanner*>(param);
 
 	if (Config::CMD_WATCHDOG_ENABLED)

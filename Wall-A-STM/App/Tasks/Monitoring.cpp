@@ -1,8 +1,10 @@
 #include "Tasks/Monitoring.h"
+#include "Tasks/MotionPlanner.h"
 
 Monitoring::Monitoring(IBus *bus, InternalTemperature *internalTemp,
-	MotorCurrentSense *motorCurrentSense) :
-	_bus(bus), _internalTemperatures(internalTemp), _motorCurrentSense(motorCurrentSense) {
+	MotorCurrentSense *motorCurrentSense, TaskHandle_t motionPlannerHandle) :
+	_bus(bus), _internalTemperatures(internalTemp), _motorCurrentSense(motorCurrentSense), _motionPlannerHandle(
+		motionPlannerHandle) {
 }
 
 void Monitoring::task(void *param) {
@@ -19,6 +21,20 @@ void Monitoring::task(void *param) {
 
 void Monitoring::checkOnce() {
 //	///////////////////////////////////////////////////////////////////////
+// //FREERTOS STATISTICS
+	//	TaskStatus_t tasks[10];
+	//	uint32_t totalRunTime;
+	//	UBaseType_t count = uxTaskGetSystemState(tasks, 10, &totalRunTime);
+	//	ExternalComm::log_info("%ld", count);
+	//	for (UBaseType_t i = 0; i < count; i++) {
+	//	    uint32_t pct = totalRunTime ? (tasks[i].ulRunTimeCounter * 100UL / totalRunTime) : 0;
+	//	    ExternalComm::log_info("%-12s stk:%4u cpu:%2lu%%",
+	//	        tasks[i].pcTaskName,
+	//	        tasks[i].usStackHighWaterMark,
+	//	        pct);
+	//	}
+
+	///////////////////////////////////////////////////////////////////////
 	//ADC reading
 	_internalTemperatures->startConversion();
 	_motorCurrentSense->startConversion();
@@ -35,6 +51,7 @@ void Monitoring::checkOnce() {
 			ExternalComm::log_info(
 				"Temperatures [C] - Pri motor driver: %.1f, Sec motor driver: %.1f, Power supplies: %.1f",
 				t0, t1, t2);
+//			xTaskNotify(_motionPlannerHandle, AlarmBits::OVERHEAT, eSetBits);
 		}
 	}
 
@@ -49,32 +66,20 @@ void Monitoring::checkOnce() {
 //		if (c2 > 100.0 || c3 > 100.0) {
 //			ExternalComm::log_info("Current [mA] - Sec left: %.3f, Sec right: %.3f", c2, c3);
 //		}
+//		xTaskNotify(_motionPlannerHandle, AlarmBits::OVERCURRENT, eSetBits);
 	}
-//	///////////////////////////////////////////////////////////////////////
-
-//	TaskStatus_t tasks[10];
-//	uint32_t totalRunTime;
-//	UBaseType_t count = uxTaskGetSystemState(tasks, 10, &totalRunTime);
-//	ExternalComm::log_info("%ld", count);
-//	for (UBaseType_t i = 0; i < count; i++) {
-//	    uint32_t pct = totalRunTime ? (tasks[i].ulRunTimeCounter * 100UL / totalRunTime) : 0;
-//	    ExternalComm::log_info("%-12s stk:%4u cpu:%2lu%%",
-//	        tasks[i].pcTaskName,
-//	        tasks[i].usStackHighWaterMark,
-//	        pct);
-//	}
 
 //	///////////////////////////////////////////////////////////////////////
-//	uint32_t now = HAL_GetTick();
+	uint32_t now = HAL_GetTick();
 	OdoControl::OdoSnapshot odoSnap;
 	taskENTER_CRITICAL();
 	odoSnap = OdoControl::latestSnapshot;
 	taskEXIT_CRITICAL();
-//	if (abs(now - odoSnap.timestamp) > Config::MONITORING_STALE_MS) {
-//		_bus->publish(Topic::ALERT, BusFormat::altStale("ODO"));
-//	}
+	if (abs(now - odoSnap.timestamp) > Config::MONITORING_STALE_MS) {
+		_bus->publish(Topic::ALERT, BusFormat::altStale("ODO"));
+	}
 	if (odoSnap.motorError) {
-		_bus->publish(Topic::ALERT, "Motor Error! Stop command");
+		_bus->publish(Topic::ALERT, "Motor Error!");
 	}
 	if (odoSnap.v || odoSnap.w) {
 //		ExternalComm::log_info(

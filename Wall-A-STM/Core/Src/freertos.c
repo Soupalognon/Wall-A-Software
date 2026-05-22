@@ -58,7 +58,6 @@ void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
 
 /* USER CODE BEGIN 1 */
 /* Functions needed when configGENERATE_RUN_TIME_STATS is on */
-extern volatile unsigned long ulHighFrequencyTimerTicks;
 
 void configureTimerForRunTimeStats(void) {
 	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;

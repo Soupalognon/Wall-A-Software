@@ -8,6 +8,7 @@
 #include <stm32f4xx_hal.h>
 
 ExternalComm *ExternalComm::_instance = nullptr;
+ExternalComm::CommSnapshot ExternalComm::latestSnapshot { };
 
 ExternalComm::ExternalComm(ICommChannel *uart, ICommChannel *usb, ICommChannel *eth,
 	IActuatorManager *actuatorMgr, QueueHandle_t motionMailbox) :

@@ -24,7 +24,7 @@ struct VelocityTarget {
 };
 
 struct Setpoint {
-	SetpointMode mode = SetpointMode::POSE;
+	SetpointMode mode = SetpointMode::VELOCITY;
 	union {
 		PoseTarget pose;
 		VelocityTarget velocity;
@@ -69,12 +69,10 @@ private:
 	float _spFilteredW = 0.0f;
 
 	uint32_t _tickCount = 0;
-	uint32_t _stallCount = 0;
-	uint32_t _encFaultCountL = 0;
-	uint32_t _encFaultCountR = 0;
 
 	static OdoControl* _instance;
 
+	void reset();
 	void routine();
 	void tickPose(Setpoint sp);
 	void tickVelocity(Setpoint sp);

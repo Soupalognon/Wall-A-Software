@@ -11,7 +11,7 @@ static constexpr uint32_t ODO_FREQ_HZ = 200;
 static constexpr uint32_t MONITORING_POLL_HZ = 10;
 
 // Fixed array bounds (NFR-02 - no dynamic allocation)
-static constexpr uint8_t MAX_SENSORS = 15;
+static constexpr uint8_t MAX_SENSORS = 15;		//WARN: If you touch this value you must modify "Wall-A-STM\App\Tasks\MotionPlanner.h" --> AlarmBits --> SENSOR table
 static constexpr uint8_t MAX_ACTUATORS = 10;
 
 // PID defaults — speed (linear velocity)
@@ -42,9 +42,6 @@ static constexpr float SPEED_EMA_ALPHA = 0.15f;	//setpoint smoothing (0=max smoo
 static constexpr float ANGLE_EMA_ALPHA = 0.05f;	//setpoint smoothing (0=max smooth, 1=no filter)
 static constexpr float FF_GAIN_V = 0.58f;        // duty per (m/s)  — estimated from open-loop data
 static constexpr float FF_GAIN_W = FF_GAIN_V * WHEEL_BASE_M / 2.0f; // duty per (rad/s) — derived from FF_GAIN_V
-static constexpr float STALL_DUTY_THRESHOLD = 0.5f;
-static constexpr float STALL_SPEED_THRESHOLD = 0.05f;
-static constexpr uint32_t STALL_TIME_MS = 500;
 static constexpr int8_t ENCODER_L_SIGN = 1;
 static constexpr int8_t ENCODER_R_SIGN = -1;
 static constexpr int8_t MOTOR_L_SIGN = +1;
@@ -75,12 +72,12 @@ static constexpr uint16_t STACK_EXTCOMM_RX = 512;
 static constexpr uint16_t STACK_EXTCOMM_TX = 256;
 
 // FreeRTOS task priorities (higher number = higher priority)
-static constexpr UBaseType_t PRIO_ODO_CONTROL = 5;
-static constexpr UBaseType_t PRIO_MOTION_PLANNER = 4;
-static constexpr UBaseType_t PRIO_EXTCOMM_RX = 4;
-static constexpr UBaseType_t PRIO_EXTCOMM_TX = 3;
-static constexpr UBaseType_t PRIO_SENSOR_MANAGER = 2;
-static constexpr UBaseType_t PRIO_MONITORING = 1;
+static constexpr UBaseType_t PRIO_ODO_CONTROL = 6;
+static constexpr UBaseType_t PRIO_MOTION_PLANNER = 5;
+static constexpr UBaseType_t PRIO_EXTCOMM_RX = 5;
+static constexpr UBaseType_t PRIO_EXTCOMM_TX = 4;
+static constexpr UBaseType_t PRIO_SENSOR_MANAGER = 3;
+static constexpr UBaseType_t PRIO_MONITORING = 2;
 
 }
 

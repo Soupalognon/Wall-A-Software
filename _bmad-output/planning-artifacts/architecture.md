@@ -393,83 +393,149 @@ void stop();           // stops the motor
 ### Complete Project Directory Structure
 
 ```
-robot-cdr/
-├── Core/                          ← généré CubeMX (ne pas modifier)
-│   ├── Inc/
-│   │   ├── main.h
-│   │   ├── FreeRTOSConfig.h
-│   │   └── stm32xxxx_hal_conf.h
-│   └── Src/
-│       ├── main.cpp               ← 3 lignes : boot() + vTaskStartScheduler()
-│       ├── stm32xxxx_hal_msp.c
-│       └── stm32xxxx_it.c         ← ISR handlers
+Wall-A-Software/                   ← racine du dépôt git
 │
-├── App/
-│   ├── Config.h                   ← toutes les constexpr (fréq, stacks, prios, PID)
+├── Wall-A-STM/                    ← projet STM32CubeIDE (firmware embarqué)
 │   │
-│   ├── Interfaces/                ← contrats purs I*.h, aucune implémentation
-│   │   ├── IBus.h
-│   │   ├── ISensor.h
-│   │   ├── IActuator.h
-│   │   ├── IActuatorManager.h
-│   │   ├── ICommChannel.h
-│   │   ├── IEncoderHAL.h
-│   │   ├── IMotorHAL.h
-│   │   ├── IOdomHAL.h
-│   │   └── ISensorHAL.h
+│   ├── Core/                      ← généré CubeMX (ne pas modifier)
+│   │   ├── Inc/
+│   │   │   ├── main.h
+│   │   │   ├── FreeRTOSConfig.h
+│   │   │   ├── stm32f4xx_hal_conf.h
+│   │   │   └── stm32f4xx_it.h
+│   │   ├── Src/
+│   │   │   ├── main.c             ← généré CubeMX, appelle cppMain()
+│   │   │   ├── freertos.c
+│   │   │   ├── stm32f4xx_hal_msp.c
+│   │   │   ├── stm32f4xx_hal_timebase_tim.c
+│   │   │   ├── stm32f4xx_it.c     ← ISR handlers
+│   │   │   ├── sys_getentropy.c
+│   │   │   ├── syscalls.c
+│   │   │   └── sysmem.c
+│   │   └── Startup/
+│   │       └── startup_stm32f407igtx.s
 │   │
-│   ├── Drivers/                   ← pilotent directement le HW (registres STM32 / HAL CubeMX)
-│   │   ├── Drv8262.h/.cpp         ← pilote le circuit DRV8262 via GPIO/PWM
-│   │   ├── Encoder.h/.cpp         ← lit les timers encodeurs via HAL
-│   │   ├── UartChannel.h/.cpp     ← canal UART via HAL_UART
-│   │   └── UsbCdcChannel.h/.cpp   ← canal USB CDC via HAL USB
+│   ├── App/
+│   │   ├── cppMain.cpp            ← point d'entrée C++ : boot() + vTaskStartScheduler()
+│   │   ├── Config.h               ← toutes les constexpr (fréq, stacks, prios, PID)
+│   │   │
+│   │   ├── Interfaces/            ← contrats purs I*.h, aucune implémentation
+│   │   │   ├── IActuator.h
+│   │   │   ├── IActuatorHAL.h
+│   │   │   ├── IActuatorManager.h
+│   │   │   ├── IBus.h
+│   │   │   ├── ICommChannel.h
+│   │   │   ├── IEncoderHAL.h
+│   │   │   ├── IMotorHAL.h
+│   │   │   ├── IOdomHAL.h
+│   │   │   ├── ISensor.h
+│   │   │   └── ISensorHAL.h
+│   │   │
+│   │   ├── Drivers/               ← pilotent directement le HW (registres STM32 / HAL CubeMX)
+│   │   │   ├── Drv8262.h/.cpp     ← pilote le circuit DRV8262 via GPIO/PWM
+│   │   │   ├── Encoder.h/.cpp     ← lit les timers encodeurs via HAL
+│   │   │   ├── InternalTemperature.h/.cpp  ← lecture ADC température interne STM32
+│   │   │   ├── MotorCurrentSense.h/.cpp    ← lecture ADC courant moteur
+│   │   │   ├── UartChannel.h/.cpp ← canal UART via HAL_UART
+│   │   │   ├── UsbCdcChannel.h/.cpp        ← canal USB CDC via HAL USB
+│   │   │   └── Stubs/             ← implémentations stub des interfaces actionneurs/capteurs
+│   │   │       ├── CurrentSensor.h/.cpp
+│   │   │       ├── LinearTransducer.h/.cpp
+│   │   │       ├── ProximitySensor.h/.cpp
+│   │   │       ├── Pump.h/.cpp
+│   │   │       ├── Servo.h/.cpp
+│   │   │       └── TemperatureSensor.h/.cpp
+│   │   │
+│   │   ├── Services/              ← orchestrent des Drivers via interfaces, sans toucher le HW
+│   │   │   ├── BusFormat.h/.cpp   ← helpers formatage ASCII IBus
+│   │   │   ├── Motor.h/.cpp       ← commande un moteur via IMotorHAL
+│   │   │   └── Odometry.h/.cpp    ← calcul position/vitesse à partir de IEncoderHAL
+│   │   │
+│   │   ├── Controllers/           ← algorithmes purs, zéro dépendance FreeRTOS ou HW
+│   │   │   └── Pid.h/.cpp         ← régulateur PID générique
+│   │   │
+│   │   ├── Tasks/                 ← tâches FreeRTOS uniquement (boucle infinie ou osThreadNew)
+│   │   │   ├── ActuatorManager.h/.cpp      ← tâche gestion actionneurs, impl IActuatorManager
+│   │   │   ├── ExternalComm.h/.cpp         ← 2 tâches rxTask+txTask, impl IBus
+│   │   │   ├── Monitoring.h/.cpp           ← 1 tâche queue-driven, seuils/alertes
+│   │   │   ├── MotionPlanner.h/.cpp        ← 1 tâche event-driven, xTaskNotify
+│   │   │   ├── OdoControl.h/.cpp           ← 1 tâche 200Hz, vTaskDelayUntil
+│   │   │   ├── SensorManager.h/.cpp        ← 1 tâche polling, ISensor[MAX_SENSORS]
+│   │   │   └── StubActuatorManager.h       ← stub no-op de IActuatorManager pour tests
+│   │   │
+│   │   └── SystemInit/
+│   │       ├── SystemInit.h
+│   │       └── SystemInit.cpp     ← boot(), câblage statique complet, zéro new
 │   │
-│   ├── Services/                  ← orchestrent des Drivers via interfaces, sans toucher le HW
-│   │   ├── Motor.h/.cpp           ← commande un moteur via Drv8262
-│   │   ├── Odometry.h/.cpp        ← calcul position/vitesse à partir de IEncoderHAL
-│   │   └── BusFormat.h/.cpp       ← helpers formatage ASCII IBus
+│   ├── Drivers/                   ← généré CubeMX (ne pas modifier)
+│   │   ├── BSP/
+│   │   ├── CMSIS/
+│   │   └── STM32F4xx_HAL_Driver/
 │   │
-│   ├── Controllers/               ← algorithmes purs, zéro dépendance FreeRTOS ou HW
-│   │   └── Pid.h/.cpp             ← régulateur PID générique
+│   ├── Middlewares/               ← généré CubeMX (ne pas modifier)
+│   │   ├── ST/STM32_USB_Device_Library/
+│   │   └── Third_Party/
+│   │       ├── FreeRTOS/
+│   │       └── LwIP/
 │   │
-│   ├── Tasks/                     ← tâches FreeRTOS uniquement (boucle infinie ou osThreadNew)
-│   │   ├── OdoControl.h/.cpp      ← 1 tâche 200Hz, vTaskDelayUntil
-│   │   ├── MotionPlanner.h/.cpp   ← 1 tâche event-driven, xTaskNotify
-│   │   ├── SensorManager.h/.cpp   ← 1 tâche polling, ISensor[MAX_SENSORS]
-│   │   ├── Monitoring.h/.cpp      ← 1 tâche queue-driven, seuils/alertes
-│   │   └── ExternalComm.h/.cpp    ← 2 tâches rxTask+txTask, impl IBus
+│   ├── LWIP/                      ← généré CubeMX — configuration LwIP (ne pas modifier)
+│   │   ├── App/
+│   │   │   └── lwip.c/.h
+│   │   └── Target/
+│   │       ├── ethernetif.c/.h
+│   │       └── lwipopts.h
 │   │
-│   └── SystemInit/
-│       ├── SystemInit.h
-│       └── SystemInit.cpp         ← boot(), câblage statique complet, zéro new
+│   ├── USB_DEVICE/                ← généré CubeMX — stack USB CDC (ne pas modifier)
+│   │   ├── App/
+│   │   │   ├── usb_device.c/.h
+│   │   │   ├── usbd_cdc_if.c/.h   ← callbacks CDC (point de contact avec UsbCdcChannel)
+│   │   │   └── usbd_desc.c/.h
+│   │   └── Target/
+│   │       └── usbd_conf.c/.h
+│   │
+│   └── Tests/                     ← tests unitaires sur host (Google Test / GMock)
+│       ├── CMakeLists.txt
+│       ├── run_tests.sh
+│       ├── Mocks/                 ← utilisent MOCK_METHOD GMock, vérifient les appels
+│       │   ├── MockActuator.h
+│       │   ├── MockActuatorHAL.h
+│       │   ├── MockBus.h
+│       │   ├── MockCommChannel.h
+│       │   ├── MockEncoderHAL.h
+│       │   ├── MockMotorHAL.h
+│       │   ├── MockOdomHAL.h
+│       │   ├── MockSensor.h
+│       │   └── MockSensorHAL.h
+│       ├── Stubs/                 ← headers/implémentations minimales pour compiler sur host
+│       │   ├── FreeRTOS.h / FreeRTOSStub.cpp
+│       │   ├── HalStub.h
+│       │   ├── queue.h / task.h
+│       │   ├── stm32f4xx_hal.h
+│       │   ├── StaticDefs.cpp
+│       │   └── usbd_cdc_if.h
+│       └── Unit/                  ← fichiers *Test.cpp, un par classe testée
+│           ├── ActuatorDriversTest.cpp
+│           ├── ActuatorManagerTest.cpp
+│           ├── BusFormatTest.cpp
+│           ├── ConcreteOdomHALTest.cpp
+│           ├── ExternalCommTest.cpp
+│           ├── MonitoringTest.cpp
+│           ├── MotionPlannerTest.cpp
+│           ├── OdoControlTest.cpp
+│           ├── PidTest.cpp
+│           ├── SensorDriversTest.cpp
+│           └── SensorManagerTest.cpp
 │
-├── Drivers/                       ← généré CubeMX (ne pas modifier)
-│   ├── STM32xxxx_HAL_Driver/
-│   └── CMSIS/
-│
-├── Middlewares/                   ← généré CubeMX (ne pas modifier)
-│   └── FreeRTOS/
-│
-└── Tests/                         ← tests unitaires sur host (Google Test)
-    ├── CMakeLists.txt
-    ├── Mocks/                     ← utilisent MOCK_METHOD GMock, vérifient les appels
-    │   ├── MockBus.h
-    │   ├── MockCommChannel.h
-    │   ├── MockEncoderHAL.h
-    │   ├── MockMotorHAL.h
-    │   ├── MockOdomHAL.h
-    │   ├── MockSensorHAL.h
-    │   └── MockHAL.h
-    ├── Stubs/                     ← implémentations minimales sans GMock, simulent l'environnement embarqué
-    │   ├── FreeRTOS.h / FreeRTOSStub.cpp
-    │   ├── queue.h / task.h
-    │   ├── stm32f4xx_hal.h
-    │   └── StaticDefs.cpp
-    └── Unit/                      ← fichiers *Test.cpp, un par classe testée
-        ├── OdoControlTest.cpp
-        ├── MotionPlannerTest.cpp
-        ├── ExternalCommTest.cpp
-        └── BusFormatTest.cpp
+└── pythonTester/                  ← outil Python host pour tester le robot via USB/série
+    ├── main.py                    ← point d'entrée
+    ├── app.py
+    ├── config.py
+    ├── data_store.py
+    ├── gamepad_tester.py
+    ├── gamepad_worker.py
+    ├── parser.py
+    ├── serial_worker.py
+    └── requirements.txt
 ```
 
 ### Folder Belonging Criteria
@@ -552,8 +618,6 @@ digraph G {
     edge [fontname="Helvetica" fontsize=10 color="#444444"]
 
     PC         [shape=ellipse fillcolor="#f5f0dd" label="PC" fontsize=15]
-    HAL        [shape=box fillcolor="#eeeeee" color="#999999"
-                label="HAL CubeMX\nEncodeurs · Moteurs · Capteurs\nActionneurs · UART · USB · ETH" fontsize=12]
     ExtComm    [label="ExternalComm\n(impl IBus)" fillcolor="#c8daf5"]
     MoPlan     [label="MotionPlanner"]
     OdoCtrl    [label="OdoControl\n200Hz — TRÈS HAUTE PRIORITÉ" fillcolor="#ffd9d9"]
@@ -564,7 +628,6 @@ digraph G {
     { rank=same; PC; ExtComm }
     { rank=same; MoPlan; ActMgr }
     { rank=same; OdoCtrl; SenMgr }
-    { rank=max;  HAL }
 
     PC -> ExtComm    [label="CMD" color="#226622" fontcolor="#226622" style=bold]
     ExtComm -> PC    [label="TEL · ALT · LOG" color="#226622" fontcolor="#226622" style=dashed]
@@ -574,6 +637,7 @@ digraph G {
 
     MoPlan  -> OdoCtrl [label="xQueueOverwrite (mailbox)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
     SenMgr  -> MoPlan  [label="xTaskNotify (alarme)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
+    Monitoring  -> MoPlan  [label="xTaskNotify (alarme)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
 
     OdoCtrl    -> ExtComm [label="IBus TELEMETRY" style=dashed color="#555555" fontcolor="#555555"]
     SenMgr     -> ExtComm [label="IBus HEALTH·ALERT" style=dashed color="#555555" fontcolor="#555555"]
@@ -582,11 +646,7 @@ digraph G {
 
     OdoCtrl -> Monitoring [label="snapshot" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]
     SenMgr  -> Monitoring [label="snapshot" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]
-    ExtComm -> Monitoring [label="snapshot" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]
-
-    OdoCtrl -> HAL [color="#bbbbbb" label="HAL injectés"]
-    SenMgr  -> HAL [color="#bbbbbb"]
-    ActMgr  -> HAL [color="#bbbbbb"]
+    ActMgr -> Monitoring [label="snapshot" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]
 }
 ```
 
@@ -680,3 +740,113 @@ Tous les agents/développeurs disposent de :
 3. Implémenter `App/BusFormat.h/.cpp`
 4. Implémenter `ExternalComm` + `IBus`
 5. Implémenter `SystemInit::boot()` avec câblage statique complet
+
+---
+
+## Dependency Graph — OdoControl (zoom)
+
+Fonctionnement interne de la tâche OdoControl (200 Hz, priorité 5) : pipeline de contrôle, dépendances HAL, et sorties système.
+
+```dot
+digraph OdoControl {
+    rankdir=TB
+    node [fontname="Helvetica" fontsize=10 shape=box]
+    edge [fontname="Helvetica" fontsize=9]
+
+    // ── Contexte système (entrées) ──────────────────────────────────────────
+    subgraph cluster_ctx {
+        label="Contexte système"
+        style=dashed color="#aaaaaa" fontcolor="#aaaaaa"
+        fontname="Helvetica" fontsize=10
+
+        MoPlan   [label="MotionPlanner\n(Task)" style=filled fillcolor="#fff3cd"]
+        ExtComm  [label="ExternalComm\n(Task)" style=filled fillcolor="#fff3cd"]
+        Monitoring [label="Monitoring\n(Task)" style=filled fillcolor="#fff3cd"]
+    }
+
+    Mailbox [label="setpointMailbox\n(QueueHandle_t)\nSetpoint { v, w }"
+             shape=cylinder style=filled fillcolor="#ffe0cc"]
+
+    // ── Pipeline interne OdoControl ─────────────────────────────────────────
+    subgraph cluster_odo {
+        label="OdoControl  [200 Hz — priorité 5]"
+        style=filled fillcolor="#fff5f5" color="#cc4400"
+        fontname="Helvetica" fontsize=11
+
+        OdomUpd  [label="1. _odom->update()\nlecture encodeurs"
+                  style=filled fillcolor="#ffdddd"]
+        EMAFilt  [label="2. Filtre EMA — lissage consigne\nspFilteredV  (α = 0.15)\nspFilteredW  (α = 0.05)"
+                  style=filled fillcolor="#ffdddd"]
+        ErrCalc  [label="3. Calcul erreur\ndv = spFilteredV − v_mes\ndw = spFilteredW − w_mes"
+                  style=filled fillcolor="#ffdddd"]
+        PIDComp  [label="4. Feedforward + PID\nv = spFilteredV · FF_V + PID_speed(dv)\nw = spFilteredW · FF_W + PID_angle(dw)"
+                  style=filled fillcolor="#ffdddd"]
+        Mixer    [label="5. Mélangeur différentiel\nleftDuty  = clamp(v − w, −1, 1)\nrightDuty = clamp(v + w, −1, 1)"
+                  style=filled fillcolor="#ffdddd"]
+        FaultDet [label="6. Détection pannes\n• Stall : duty↑ & |v| → 0\n• Enc. fault : duty↑ & vL/R = 0"
+                  shape=diamond style=filled fillcolor="#ffcccc"]
+        Snap     [label="7. Snapshot  (÷ 10 ticks)\nlatestSnapshot ← { x, y, θ,\n  vL, vR, v, w, timestamp }"
+                  style=filled fillcolor="#ffdddd"]
+    }
+
+    // ── Couche HAL ──────────────────────────────────────────────────────────
+    subgraph cluster_hal {
+        label="Couche HAL"
+        style=filled fillcolor="#eaf4ea" color="#336633"
+        fontname="Helvetica" fontsize=10
+
+        OdomHAL  [label="IOdomHAL\n→ Odometry\n→ IEncoderHAL\n→ Encodeurs (TIM)"
+                  style=filled fillcolor="#c8e6c8"]
+        MotorHAL [label="IMotorHAL\n→ Drv8262\n→ PWM (TIM)"
+                  style=filled fillcolor="#c8e6c8"]
+    }
+
+    // ── Sorties bus ─────────────────────────────────────────────────────────
+    BusTelem [label="IBus TELEMETRY\nBusFormat::telOdoVelocity\n(chaque tick)"
+              shape=ellipse style=filled fillcolor="#d0e8ff"]
+    BusAlert [label="IBus ALERT\naltStall / altEncoderFault\naltInitFailed"
+              shape=ellipse style=filled fillcolor="#ffd0d0"]
+
+    // ── Flux d'entrée ───────────────────────────────────────────────────────
+    MoPlan  -> Mailbox  [label="xQueueOverwrite"
+                         color="#cc4400" fontcolor="#cc4400" penwidth=2]
+    Mailbox -> EMAFilt  [label="xQueuePeek  (200 Hz)"
+                         color="#cc4400" fontcolor="#cc4400" penwidth=2]
+    ExtComm -> PIDComp  [label="setPidGains()" style=dashed
+                         color="#555555" fontcolor="#555555"]
+
+    // ── Pipeline interne ────────────────────────────────────────────────────
+    OdomHAL -> OdomUpd  [label="ticks encodeurs"
+                         color="#336633" fontcolor="#336633"]
+    OdomUpd -> ErrCalc  [label="getV(), getW()"]
+    OdomUpd -> Snap     [label="getX(), getY(), getAngle()" style=dashed
+                         color="#aaaaaa" fontcolor="#aaaaaa"]
+    EMAFilt -> ErrCalc
+    ErrCalc -> PIDComp
+    PIDComp -> Mixer
+    Mixer   -> FaultDet
+
+    // ── Sortie moteurs ──────────────────────────────────────────────────────
+    FaultDet -> MotorHAL [label="setMotors(L, R)  ✔"
+                          color="#336633" fontcolor="#336633" penwidth=2]
+    FaultDet -> BusAlert [label="panne détectée" style=dashed
+                          color="#cc0000" fontcolor="#cc0000"]
+
+    // ── Init failures ───────────────────────────────────────────────────────
+    OdomHAL  -> BusAlert [label="begin() KO" style=dashed
+                           color="#cc0000" fontcolor="#cc0000"]
+    MotorHAL -> BusAlert [label="begin() KO" style=dashed
+                           color="#cc0000" fontcolor="#cc0000"]
+
+    // ── Télémétrie & snapshot ───────────────────────────────────────────────
+    Mixer -> BusTelem   [label="telOdoVelocity" style=dashed
+                         color="#555555" fontcolor="#555555"]
+    Snap  -> Monitoring [label="read (taskENTER_CRITICAL)" style=dotted
+                         color="#aaaaaa" fontcolor="#aaaaaa"]
+
+    // ── Mise en page ────────────────────────────────────────────────────────
+    { rank=same; MoPlan; ExtComm; Monitoring }
+    { rank=same; OdomHAL; MotorHAL }
+    { rank=same; BusTelem; BusAlert }
+}
+```

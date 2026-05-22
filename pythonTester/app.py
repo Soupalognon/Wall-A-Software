@@ -11,10 +11,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import serial.tools.list_ports
 
-from config import DEFAULT_COM_PORT, BAUD_RATES, PLOT_WINDOW, VEL_V_MIN, VEL_V_MAX, VEL_W_MIN, VEL_W_MAX
+from config import (DEFAULT_COM_PORT, BAUD_RATES, PLOT_WINDOW,
+                    VEL_V_MIN, VEL_V_MAX, VEL_W_MIN, VEL_W_MAX,
+                    GAMEPAD_POLL_HZ, GAMEPAD_DEADZONE, GAMEPAD_AXIS_V, GAMEPAD_AXIS_W,
+                    GAMEPAD_AXIS_TRIGGER, GAMEPAD_V_MAX_NORMAL, GAMEPAD_W_MAX_NORMAL)
 from parser import parse_frame
 from data_store import DataStore
 from serial_worker import SerialWorker
+from gamepad_worker import GamepadWorker
 
 
 class App(tk.Tk):
@@ -45,6 +49,17 @@ class App(tk.Tk):
         self._auto_vel     = tk.BooleanVar(value=False)
         self._svar_auto_hz = tk.StringVar(value='10')
         self._auto_vel_job: str | None = None
+
+        # Manette
+        self._gamepad_worker: GamepadWorker | None = None
+        self._gamepad_active = tk.BooleanVar(value=False)
+        self._svar_gp_deadzone    = tk.StringVar(value=str(GAMEPAD_DEADZONE))
+        self._ivar_gp_axis_v      = tk.IntVar(value=GAMEPAD_AXIS_V)
+        self._ivar_gp_axis_w      = tk.IntVar(value=GAMEPAD_AXIS_W)
+        self._ivar_gp_axis_trigger = tk.IntVar(value=GAMEPAD_AXIS_TRIGGER)
+        self._svar_gp_v_max_normal = tk.StringVar(value=str(GAMEPAD_V_MAX_NORMAL))
+        self._svar_gp_w_max_normal = tk.StringVar(value=str(GAMEPAD_W_MAX_NORMAL))
+        self._gp_status_labels: list[tk.Label] = []
 
         self._dvar_vel_v.trace_add('write', self._on_dbl_vel_v)
         self._dvar_vel_w.trace_add('write', self._on_dbl_vel_w)
@@ -204,6 +219,9 @@ class App(tk.Tk):
 
         ttk.Button(grp_pid, text='Envoyer', command=self._send_pid).grid(row=0, column=6, padx=10)
 
+        # ── Manette ──────────────────────────────────────────────────
+        self._build_gamepad_panel(parent)
+
         # ── Journal des envois (onglet Commandes seulement) ───────────
         if with_log:
             grp_log = ttk.LabelFrame(parent, text='Journal des envois')
@@ -215,6 +233,140 @@ class App(tk.Tk):
             self._cmd_log.pack(fill=tk.BOTH, expand=True, padx=4, pady=4)
             self._cmd_log.tag_config('ok', foreground='#4ec94e')
             self._cmd_log.tag_config('err', foreground='#cc3333')
+
+    def _build_gamepad_panel(self, parent: tk.Widget):
+        pad = {'padx': 8, 'pady': 4}
+        grp = ttk.LabelFrame(parent, text='Manette  —  Gamepad')
+        grp.pack(fill=tk.X, **pad)
+
+        # Ligne 0 : sélection manette
+        tk.Label(grp, text='Manette:').grid(row=0, column=0, padx=6, pady=6)
+        self._gp_combo = ttk.Combobox(grp, width=28, state='readonly')
+        self._gp_combo.grid(row=0, column=1, padx=4)
+
+        ttk.Button(grp, text='⟳', width=3,
+                   command=self._refresh_gamepad_list).grid(row=0, column=2, padx=4)
+
+        ttk.Checkbutton(grp, text='Activer', variable=self._gamepad_active,
+                        command=self._toggle_gamepad).grid(row=0, column=3, padx=(16, 4))
+
+        # Ligne 1 : axes et dead zone
+        tk.Label(grp, text='Axe v:').grid(row=1, column=0, padx=6)
+        ttk.Spinbox(grp, from_=0, to=15, textvariable=self._ivar_gp_axis_v,
+                    width=4).grid(row=1, column=1, padx=4, sticky=tk.W)
+
+        tk.Label(grp, text='Axe w:').grid(row=1, column=2, padx=(16, 4))
+        ttk.Spinbox(grp, from_=0, to=15, textvariable=self._ivar_gp_axis_w,
+                    width=4).grid(row=1, column=3, padx=4, sticky=tk.W)
+
+        tk.Label(grp, text='Dead zone:').grid(row=1, column=4, padx=(16, 4))
+        ttk.Entry(grp, textvariable=self._svar_gp_deadzone, width=6).grid(row=1, column=5, padx=4)
+
+        # Ligne 2 : gâchette et limites normales
+        tk.Label(grp, text='Axe gâchette D:').grid(row=2, column=0, padx=6, pady=4)
+        ttk.Spinbox(grp, from_=0, to=15, textvariable=self._ivar_gp_axis_trigger,
+                    width=4).grid(row=2, column=1, padx=4, sticky=tk.W)
+
+        tk.Label(grp, text='v max normal (m/s):').grid(row=2, column=2, padx=(16, 4))
+        ttk.Entry(grp, textvariable=self._svar_gp_v_max_normal, width=6).grid(row=2, column=3, padx=4)
+
+        tk.Label(grp, text='w max normal (rad/s):').grid(row=2, column=4, padx=(16, 4))
+        ttk.Entry(grp, textvariable=self._svar_gp_w_max_normal, width=6).grid(row=2, column=5, padx=4)
+
+        # Ligne 3 : état temps réel
+        lbl = tk.Label(grp, text='● Inactive', fg='#888888')
+        lbl.grid(row=3, column=0, columnspan=6, padx=6, pady=(2, 6), sticky=tk.W)
+        self._gp_status_labels.append(lbl)
+
+        if not GamepadWorker.is_available():
+            self._set_gp_status('⚠ pygame non installé — pip install pygame', '#cc3333')
+
+        self._refresh_gamepad_list()
+
+    def _set_gp_status(self, text: str, fg: str):
+        for lbl in self._gp_status_labels:
+            lbl.config(text=text, fg=fg)
+
+    # ── Gamepad ───────────────────────────────────────────────────────
+
+    def _refresh_gamepad_list(self):
+        names = GamepadWorker.list_joysticks()
+        self._gp_combo['values'] = names
+        if names:
+            self._gp_combo.current(0)
+
+    def _toggle_gamepad(self):
+        if self._gamepad_active.get():
+            self._start_gamepad()
+        else:
+            self._stop_gamepad()
+
+    def _start_gamepad(self):
+        if not GamepadWorker.is_available():
+            self._gamepad_active.set(False)
+            self._set_gp_status('⚠ pygame non installé — pip install pygame', '#cc3333')
+            return
+
+        idx = self._gp_combo.current()
+        if idx < 0:
+            self._gamepad_active.set(False)
+            self._set_gp_status('⚠ Aucune manette sélectionnée', '#cc3333')
+            return
+
+        try:
+            deadzone = float(self._svar_gp_deadzone.get())
+        except ValueError:
+            deadzone = GAMEPAD_DEADZONE
+
+        try:
+            v_max_normal = float(self._svar_gp_v_max_normal.get())
+        except ValueError:
+            v_max_normal = GAMEPAD_V_MAX_NORMAL
+
+        try:
+            w_max_normal = float(self._svar_gp_w_max_normal.get())
+        except ValueError:
+            w_max_normal = GAMEPAD_W_MAX_NORMAL
+
+        self._gamepad_worker = GamepadWorker(
+            joystick_index=idx,
+            axis_v=self._ivar_gp_axis_v.get(),
+            axis_w=self._ivar_gp_axis_w.get(),
+            deadzone=deadzone,
+            callback=self._on_gamepad_data,
+            poll_hz=GAMEPAD_POLL_HZ,
+            axis_trigger=self._ivar_gp_axis_trigger.get(),
+            v_max_normal=v_max_normal,
+            w_max_normal=w_max_normal,
+        )
+        self._gamepad_worker.start()
+        self._set_gp_status('● Active — v: 0.000  w: 0.000', '#4ec94e')
+
+    def _stop_gamepad(self):
+        if self._gamepad_worker:
+            self._gamepad_worker.stop()
+            self._gamepad_worker = None
+        self._dvar_vel_v.set(0.0)
+        self._dvar_vel_w.set(0.0)
+        self._set_gp_status('● Inactive', '#888888')
+
+    def _on_gamepad_data(self, v, w):
+        # Appelé depuis le thread gamepad — déléguer au thread Tkinter
+        if v is None:
+            self.after(0, self._on_gamepad_error)
+        else:
+            self.after(0, self._apply_gamepad, v, w)
+
+    def _apply_gamepad(self, v: float, w: float):
+        self._dvar_vel_v.set(v)
+        self._dvar_vel_w.set(w)
+        self._send_move_vel()
+        self._set_gp_status(f'● Active — v: {v:.3f}  w: {w:.3f}', '#4ec94e')
+
+    def _on_gamepad_error(self):
+        self._gamepad_active.set(False)
+        self._gamepad_worker = None
+        self._set_gp_status('⚠ Erreur — manette déconnectée ?', '#cc3333')
 
     # ── Slider ↔ Entry sync ───────────────────────────────────────────
 
@@ -423,6 +575,8 @@ class App(tk.Tk):
         self._canvas.draw_idle()
 
     def _on_close(self):
+        if self._gamepad_worker:
+            self._gamepad_worker.stop()
         if self._worker:
             self._worker.stop()
         self.destroy()

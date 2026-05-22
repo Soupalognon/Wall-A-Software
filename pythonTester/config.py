@@ -9,3 +9,15 @@ VEL_V_MIN = -1.8   # m/s
 VEL_V_MAX =  1.8   # m/s
 VEL_W_MIN = -20.0   # rad/s
 VEL_W_MAX =  20.0   # rad/s
+
+# Manette (gamepad)
+GAMEPAD_POLL_HZ  = 20
+GAMEPAD_DEADZONE = 0.08   # zone morte normalisée (0–1)
+GAMEPAD_AXIS_V   = 1      # stick gauche vertical  (Xbox/PS : axe 1)
+GAMEPAD_AXIS_W   = 2      # stick droit horizontal (Xbox/PS : axe 2)
+GAMEPAD_AXIS_TRIGGER = 5  # gâchette droite        (Xbox/PS : axe 5)
+
+# Limites en mode normal (sans gâchette)
+GAMEPAD_V_MAX_NORMAL = 1.0   # m/s
+GAMEPAD_W_MAX_NORMAL = 10.0   # rad/s
+# Quand la gâchette droite est enfoncée, les limites passent à VEL_V_MAX / VEL_W_MAX

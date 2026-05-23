@@ -615,38 +615,34 @@ digraph G {
     node [fontname="Helvetica" fontsize=13 style=filled shape=box fillcolor="#dde8f5" color="#6688aa" penwidth=1.5]
     edge [fontname="Helvetica" fontsize=10 color="#444444"]
 
-    PC         [shape=ellipse fillcolor="#f5f0dd" label="PC" fontsize=15]
-    DEBUG      [shape=ellipse fillcolor="#f5f0dd" label="DEBUG" fontsize=15]
+    PC         [shape=ellipse fillcolor="#f5f0dd" label=<<B><FONT POINT-SIZE="15">PC</FONT></B><BR/><I><FONT POINT-SIZE="9">usb / eth</FONT></I>>]
+    DEBUG      [shape=ellipse fillcolor="#f5f0dd" label=<<B><FONT POINT-SIZE="15">DEBUG</FONT></B><BR/><I><FONT POINT-SIZE="9">uart</FONT></I>>]
     ExtComm    [label=<<B>ExternalComm</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">Queue</FONT></I>> fillcolor="#c8daf5"]
     MoPlan     [label=<<B>MotionPlanner</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">Queue or Notify</FONT></I>>]
     OdoCtrl    [label=<<B>OdoControl<BR/><FONT POINT-SIZE="10">TRÈS HAUTE PRIORITÉ</FONT><BR/></B><I><FONT POINT-SIZE="10" COLOR="#336699">200Hz</FONT></I>> fillcolor="#ffd9d9"]
     SenMgr     [label=<<B>SensorManager</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">10Hz</FONT></I>>]
-    ActMgr     [label=<<B>ActuatorManager</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">?????</FONT></I>>]
     Monitoring [label=<<B>Monitoring</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">10Hz</FONT></I>>]
 
     { rank=same; PC; DEBUG }
     { rank=same; ExtComm }
-    { rank=same; MoPlan; ActMgr }
+    { rank=same; MoPlan }
     { rank=same; OdoCtrl; SenMgr }
 
     PC -> ExtComm    [label="CMD" color="#226622" fontcolor="#226622" style=bold]
-    ExtComm -> PC    [label="TELEMETRY · HEALTH · ALERT" color="#226622" fontcolor="#226622" style=dashed]
+    ExtComm -> PC    [label="TELEMETRY / HEALTH / ALERT" color="#226622" fontcolor="#226622" style=dashed]
     DEBUG -> ExtComm    [label="CMD" color="#226622" fontcolor="#226622" style=bold]
     ExtComm -> DEBUG    [label="All logs" color="#226622" fontcolor="#226622" style=dashed]
 
-    ExtComm -> ActMgr  [label="CMD actuator"]
-
-    ExtComm -> MoPlan  [label="xQueueOverwrite(CMD)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
+    ExtComm -> MoPlan  [label="xQueueOverwrite (CMD)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
     MoPlan  -> OdoCtrl [label="xQueueOverwrite (mailbox)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
     SenMgr  -> MoPlan  [label="xTaskNotify (alarm)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
     Monitoring  -> MoPlan  [label="xTaskNotify (alarm)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
 
     OdoCtrl    -> ExtComm [label="TELEMETRY" style=dashed color="#555555" fontcolor="#555555"]
-    Monitoring -> ExtComm [label="TELEMETRY · HEALTH · ALERT" style=dashed color="#555555" fontcolor="#555555"]
+    Monitoring -> ExtComm [label="TELEMETRY / HEALTH / ALERT" style=dashed color="#555555" fontcolor="#555555"]
 
     OdoCtrl -> Monitoring [label="snapshot" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]
     SenMgr  -> Monitoring [label="snapshot" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]
-    ActMgr -> Monitoring [label="snapshot" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]
 }
 ```
 

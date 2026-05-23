@@ -54,22 +54,22 @@ void OdoControl::routine() {
 
 	Setpoint sp { };
 	if (xQueuePeek(_mailbox, &sp, 0) == pdTRUE) {
-//		if (sp.mode == SetpointMode::VELOCITY)
-//			tickVelocity(sp);
-//		else if (sp.mode == SetpointMode::POSE)
-//			tickPose(sp);
+		if (sp.mode == SetpointMode::VELOCITY)
+			tickVelocity(sp);
+		else if (sp.mode == SetpointMode::POSE)
+			tickPose(sp);
+
+//		_bus->publish(Topic::TELEMETRY,
+//			BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
+		////	_bus->publish(Topic::TELEMETRY,
+		////				BusFormat::telOdoPose(HAL_GetTick(), _odom->getX(), _odom->getY(), _odom->getAngle()));
 	} else {
 		reset();
 	}
 
-	_bus->publish(Topic::TELEMETRY,
-		BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
-//	_bus->publish(Topic::TELEMETRY,
-//				BusFormat::telOdoPose(HAL_GetTick(), _odom->getX(), _odom->getY(), _odom->getAngle()));
-
 	if (_tickCount % Config::TELEM_DIVIDER == 0) {
-		latestSnapshot = { _odom->getX(), _odom->getY(), _odom->getAngle(), _odom->getVLeft(),
-			_odom->getVRight(), _odom->getV(), _odom->getW(), _motor->isError(), HAL_GetTick() };
+//		latestSnapshot = { _odom->getX(), _odom->getY(), _odom->getAngle(), _odom->getVLeft(),
+//			_odom->getVRight(), _odom->getV(), _odom->getW(), _motor->isError(), HAL_GetTick() };
 	}
 }
 

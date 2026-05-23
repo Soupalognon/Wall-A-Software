@@ -15,8 +15,9 @@ SensorManager::SensorManager(ISensor** sensors, uint8_t sensorCount,
 void SensorManager::task(void* param) {
     auto* self = static_cast<SensorManager*>(param);
     for (;;) {
+    	vTaskDelay(pdMS_TO_TICKS(1000 / Config::SENSOR_FREQ_HZ));
+
         self->pollOnce();
-        vTaskDelay(pdMS_TO_TICKS(Config::SENSOR_POLL_MS));
     }
 }
 

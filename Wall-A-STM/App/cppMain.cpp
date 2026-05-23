@@ -124,13 +124,13 @@ extern "C" void cppMain(void) {
 		Config::PRIO_EXTCOMM_TX, nullptr);
 	createTask(OdoControl::task, "OdoCtrl", Config::STACK_ODO_CONTROL, &odoCtrl,
 		Config::PRIO_ODO_CONTROL, nullptr);
-//	createTask(MotionPlanner::task, "MoPlan", Config::STACK_MOTION_PLANNER, &motionPlanner,
-//		Config::PRIO_MOTION_PLANNER, nullptr);
+	createTask(MotionPlanner::task, "MoPlan", Config::STACK_MOTION_PLANNER, &motionPlanner,
+		Config::PRIO_MOTION_PLANNER, nullptr);
 
-//	static Monitoring monitoring { &extComm, &internalTemperatures, &motorCurrentSense,
-//		MotionPlanner::handle };
-//	createTask(Monitoring::task, "Monitor", Config::STACK_MONITORING, &monitoring,
-//		Config::PRIO_MONITORING, nullptr);
+	static Monitoring monitoring { &extComm, &internalTemperatures, &motorCurrentSense,
+		MotionPlanner::handle };
+	createTask(Monitoring::task, "Monitor", Config::STACK_MONITORING, &monitoring,
+		Config::PRIO_MONITORING, nullptr);
 
 	// static SensorManager sensorManager { sensors, sensorCount, MotionPlanner::handle, &extComm };
 	//	createTask(SensorManager::task, "SensorMgr", Config::STACK_SENSOR_MANAGER, &sensorManager,

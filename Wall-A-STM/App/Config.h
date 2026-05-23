@@ -8,7 +8,8 @@ namespace Config {
 
 // Task frequency
 static constexpr uint32_t ODO_FREQ_HZ = 200;
-static constexpr uint32_t MONITORING_POLL_HZ = 10;
+static constexpr uint32_t MONITORING_FREQ_HZ = 10;
+static constexpr uint32_t SENSOR_FREQ_HZ = 10;
 
 // Fixed array bounds (NFR-02 - no dynamic allocation)
 static constexpr uint8_t MAX_SENSORS = 15;		//WARN: If you touch this value you must modify "Wall-A-STM\App\Tasks\MotionPlanner.h" --> AlarmBits --> SENSOR table
@@ -47,9 +48,6 @@ static constexpr int8_t ENCODER_R_SIGN = -1;
 static constexpr int8_t MOTOR_L_SIGN = +1;
 static constexpr int8_t MOTOR_R_SIGN = +1;
 static constexpr uint8_t TELEM_DIVIDER = 10;
-
-// SensorManager polling rate
-static constexpr uint32_t SENSOR_POLL_MS = 50;
 
 // Sensor alarm thresholds
 static constexpr float PROXIMITY_ALARM_M = 0.20f;

@@ -604,45 +604,45 @@ Tous modules → IBus (LOG) → ExternalComm::txTask → PC
 
 ### Dependency Graph
 
-> **Légende :** vert = communication PC ↔ ExternalComm · rouge = flux temps-réel FreeRTOS (`xQueueOverwrite`, `xTaskNotify`) · tirets gris = publications IBus · pointillés = snapshots pull (Monitoring) · gris clair = interfaces HAL injectées
-
-Source Graphviz (`dependency-graph.dot`) :
+> **Légende :** vert = communication PC ↔ ExternalComm · rouge = flux temps-réel FreeRTOS (`xQueueOverwrite`, `xTaskNotify`) · tirets gris = publications IBus · pointillés = snapshots pull (Monitoring) · gris clair = interfaces HAL injectées · *bleu italique* = fréquence de la tâche
 
 ```dot
 digraph G {
     rankdir=TB
-    nodesep=0.7
-    ranksep=1.0
+    nodesep=1.0
+    ranksep=1.5
     fontname="Helvetica"
     node [fontname="Helvetica" fontsize=13 style=filled shape=box fillcolor="#dde8f5" color="#6688aa" penwidth=1.5]
     edge [fontname="Helvetica" fontsize=10 color="#444444"]
 
     PC         [shape=ellipse fillcolor="#f5f0dd" label="PC" fontsize=15]
-    ExtComm    [label="ExternalComm\n(impl IBus)" fillcolor="#c8daf5"]
-    MoPlan     [label="MotionPlanner"]
-    OdoCtrl    [label="OdoControl\n200Hz — TRÈS HAUTE PRIORITÉ" fillcolor="#ffd9d9"]
-    SenMgr     [label="SensorManager"]
-    ActMgr     [label="ActuatorManager"]
-    Monitoring [label="Monitoring"]
+    DEBUG      [shape=ellipse fillcolor="#f5f0dd" label="DEBUG" fontsize=15]
+    ExtComm    [label=<<B>ExternalComm</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">Queue</FONT></I>> fillcolor="#c8daf5"]
+    MoPlan     [label=<<B>MotionPlanner</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">Queue or Notify</FONT></I>>]
+    OdoCtrl    [label=<<B>OdoControl<BR/><FONT POINT-SIZE="10">TRÈS HAUTE PRIORITÉ</FONT><BR/></B><I><FONT POINT-SIZE="10" COLOR="#336699">200Hz</FONT></I>> fillcolor="#ffd9d9"]
+    SenMgr     [label=<<B>SensorManager</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">10Hz</FONT></I>>]
+    ActMgr     [label=<<B>ActuatorManager</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">?????</FONT></I>>]
+    Monitoring [label=<<B>Monitoring</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">10Hz</FONT></I>>]
 
-    { rank=same; PC; ExtComm }
+    { rank=same; PC; DEBUG }
+    { rank=same; ExtComm }
     { rank=same; MoPlan; ActMgr }
     { rank=same; OdoCtrl; SenMgr }
 
     PC -> ExtComm    [label="CMD" color="#226622" fontcolor="#226622" style=bold]
-    ExtComm -> PC    [label="TEL · ALT · LOG" color="#226622" fontcolor="#226622" style=dashed]
+    ExtComm -> PC    [label="TELEMETRY · HEALTH · ALERT" color="#226622" fontcolor="#226622" style=dashed]
+    DEBUG -> ExtComm    [label="CMD" color="#226622" fontcolor="#226622" style=bold]
+    ExtComm -> DEBUG    [label="All logs" color="#226622" fontcolor="#226622" style=dashed]
 
-    ExtComm -> MoPlan  [label="CMD mouvement"]
-    ExtComm -> ActMgr  [label="CMD actionneur"]
+    ExtComm -> ActMgr  [label="CMD actuator"]
 
+    ExtComm -> MoPlan  [label="xQueueOverwrite(CMD)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
     MoPlan  -> OdoCtrl [label="xQueueOverwrite (mailbox)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
-    SenMgr  -> MoPlan  [label="xTaskNotify (alarme)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
-    Monitoring  -> MoPlan  [label="xTaskNotify (alarme)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
+    SenMgr  -> MoPlan  [label="xTaskNotify (alarm)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
+    Monitoring  -> MoPlan  [label="xTaskNotify (alarm)" color="#cc4400" fontcolor="#cc4400" penwidth=2]
 
-    OdoCtrl    -> ExtComm [label="IBus TELEMETRY" style=dashed color="#555555" fontcolor="#555555"]
-    SenMgr     -> ExtComm [label="IBus HEALTH·ALERT" style=dashed color="#555555" fontcolor="#555555"]
-    ActMgr     -> ExtComm [label="IBus TELEMETRY" style=dashed color="#555555" fontcolor="#555555"]
-    Monitoring -> ExtComm [label="IBus ALERT" style=dashed color="#555555" fontcolor="#555555"]
+    OdoCtrl    -> ExtComm [label="TELEMETRY" style=dashed color="#555555" fontcolor="#555555"]
+    Monitoring -> ExtComm [label="TELEMETRY · HEALTH · ALERT" style=dashed color="#555555" fontcolor="#555555"]
 
     OdoCtrl -> Monitoring [label="snapshot" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]
     SenMgr  -> Monitoring [label="snapshot" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]

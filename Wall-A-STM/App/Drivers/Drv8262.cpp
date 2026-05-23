@@ -7,7 +7,7 @@
 extern TIM_HandleTypeDef htim1;
 
 bool Drv8262::begin() {
-	ExternalComm::log_info("Drv8262: Initialisation...");
+//	ExternalComm::log_info("Drv8262: Initialisation...");
 
 	HAL_StatusTypeDef rc1 = HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	if (rc1 != HAL_OK) {
@@ -31,7 +31,7 @@ bool Drv8262::begin() {
 		return 1;
 	}
 
-	ExternalComm::log_info("Drv8262: Init OK");
+//	ExternalComm::log_info("Drv8262: Init OK");
 	return 0;
 }
 

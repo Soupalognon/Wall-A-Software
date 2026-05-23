@@ -13,8 +13,9 @@ void Monitoring::task(void *param) {
 	self->_internalTemperatures->setNotifyThread(xTaskGetCurrentTaskHandle());
 	self->_motorCurrentSense->setNotifyThread(xTaskGetCurrentTaskHandle());
 
+	ExternalComm::log_info("Monitoring: Init OK");
 	for (;;) {
-		vTaskDelay(pdMS_TO_TICKS(1000 / Config::MONITORING_POLL_HZ));
+		vTaskDelay(pdMS_TO_TICKS(1000 / Config::MONITORING_FREQ_HZ));
 		self->checkOnce();
 	}
 }
@@ -70,25 +71,25 @@ void Monitoring::checkOnce() {
 	}
 
 //	///////////////////////////////////////////////////////////////////////
-	uint32_t now = HAL_GetTick();
-	OdoControl::OdoSnapshot odoSnap;
-	taskENTER_CRITICAL();
-	odoSnap = OdoControl::latestSnapshot;
-	taskEXIT_CRITICAL();
-	if (abs(now - odoSnap.timestamp) > Config::MONITORING_STALE_MS) {
-		_bus->publish(Topic::ALERT, BusFormat::altStale("ODO"));
-	}
-	if (odoSnap.motorError) {
-		_bus->publish(Topic::ALERT, "Motor Error!");
-	}
-	if (odoSnap.v || odoSnap.w) {
-//		ExternalComm::log_info(
-//			"x:%.2f, y:%.2f, angle:%.2f, vLeft:%.2f, vRight:%.2f, v:%.2f, w:%.2f, motorError:%d",
-//			odoSnap.x, odoSnap.y, odoSnap.angle, odoSnap.vLeft, odoSnap.vRight, odoSnap.v,
-//			odoSnap.w, odoSnap.motorError);
-//		ExternalComm::log_info("vLeft:%.2f, vRight:%.2f, v:%.2f, w:%.2f", odoSnap.vLeft,
-//			odoSnap.vRight, odoSnap.v, odoSnap.w);
-	}
+//	uint32_t now = HAL_GetTick();
+//	OdoControl::OdoSnapshot odoSnap;
+//	taskENTER_CRITICAL();
+//	odoSnap = OdoControl::latestSnapshot;
+//	taskEXIT_CRITICAL();
+//	if (abs(now - odoSnap.timestamp) > Config::MONITORING_STALE_MS) {
+//		_bus->publish(Topic::ALERT, BusFormat::altStale("ODO"));
+//	}
+//	if (odoSnap.motorError) {
+//		_bus->publish(Topic::ALERT, "Motor Error!");
+//	}
+//	if (odoSnap.v || odoSnap.w) {
+////		ExternalComm::log_info(
+////			"x:%.2f, y:%.2f, angle:%.2f, vLeft:%.2f, vRight:%.2f, v:%.2f, w:%.2f, motorError:%d",
+////			odoSnap.x, odoSnap.y, odoSnap.angle, odoSnap.vLeft, odoSnap.vRight, odoSnap.v,
+////			odoSnap.w, odoSnap.motorError);
+////		ExternalComm::log_info("vLeft:%.2f, vRight:%.2f, v:%.2f, w:%.2f", odoSnap.vLeft,
+////			odoSnap.vRight, odoSnap.v, odoSnap.w);
+//	}
 
 //	///////////////////////////////////////////////////////////////////////
 //    SensorManager::SensorSnapshot sensorSnap;

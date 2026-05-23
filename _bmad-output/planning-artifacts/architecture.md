@@ -846,3 +846,227 @@ digraph OdoControl {
     { rank=same; BusTelem; BusAlert }
 }
 ```
+
+---
+
+## Dependency Graph — RX path (PC → Robot)
+
+Flux d'entrée : depuis le physique (UART byte-par-byte / USB CDC burst) jusqu'au dispatch applicatif. Les deux canaux convergent sur la même `_rxByteQueue`.
+
+> **Légende :** rouge = chemin ISR → FreeRTOS · vert = périphérique HAL/CDC stack · bleu = tâche applicative · tirets gris = callbacks hardware
+
+```dot
+digraph RxPath {
+    rankdir=TB
+    nodesep=0.9
+    ranksep=1.0
+    fontname="Helvetica"
+    node [fontname="Helvetica" fontsize=10 style=filled shape=box fillcolor="#dde8f5" color="#6688aa" penwidth=1.5]
+    edge [fontname="Helvetica" fontsize=9 color="#444444"]
+
+    // ── Acteurs externes ─────────────────────────────────────────────────────
+    DEBUG  [shape=ellipse fillcolor="#f5f0dd" label=<<B>DEBUG</B><BR/><I><FONT POINT-SIZE="9">UART</FONT></I>>]
+    PC     [shape=ellipse fillcolor="#f5f0dd" label=<<B>PC</B><BR/><I><FONT POINT-SIZE="9">USB CDC</FONT></I>>]
+
+    // ── Couche HAL ───────────────────────────────────────────────────────────
+    subgraph cluster_hw {
+        label="STM32 Hardware / HAL"
+        style=filled fillcolor="#eaf4ea" color="#336633"
+        fontname="Helvetica" fontsize=10
+
+        UART_HW [label="UART périphérique\nHUART_HandleTypeDef\nHAL_UART_Receive_IT(1 octet)"
+                 style=filled fillcolor="#c8e6c8"]
+        USB_HW  [label="USB FS périphérique\nUSBD_HandleTypeDef\n+ CDC stack"
+                 style=filled fillcolor="#c8e6c8"]
+    }
+
+    // ── UartChannel RX ───────────────────────────────────────────────────────
+    subgraph cluster_uart {
+        label="UartChannel  (Driver)"
+        style=filled fillcolor="#fff8ee" color="#cc8800"
+        fontname="Helvetica" fontsize=10
+
+        URxISR [label="onRxComplete(huart)\n─────────────────\nISR context\nxQueueSendFromISR(_rxQueue, byte)\nHAL_UART_Receive_IT()  ← ré-armement"
+                fillcolor="#ffe8cc"]
+    }
+
+    // ── UsbCdcChannel RX ─────────────────────────────────────────────────────
+    subgraph cluster_usb {
+        label="UsbCdcChannel  (Driver)"
+        style=filled fillcolor="#f0f0ff" color="#5555cc"
+        fontname="Helvetica" fontsize=10
+
+        USRxISR [label="onRxData(buf, len)\n─────────────────\nISR context  (buffer entier)\nfor each byte:\n  xQueueSendFromISR(_rxQueue, byte)\nportYIELD_FROM_ISR(woken)"
+                 fillcolor="#d8d8ff"]
+    }
+
+    // ── Queue partagée ───────────────────────────────────────────────────────
+    RxQueue [label="_rxByteQueue\nQueueHandle_t  (64 octets)\npartagée UART + USB"
+             shape=cylinder fillcolor="#ffd0d0" color="#cc0000" penwidth=2]
+
+    // ── ExternalComm rxTask ──────────────────────────────────────────────────
+    subgraph cluster_ec {
+        label="ExternalComm  (Task)"
+        style=filled fillcolor="#e8f0ff" color="#334499"
+        fontname="Helvetica" fontsize=10
+
+        RxTask [label="rxTask\n─────────────────\nxQueueReceive(bloquant)\nassemble octets → ligne (\\n)\nsscanf / token parse\ndispatch sur préfixe CMD"
+                fillcolor="#c0d0f0"]
+    }
+
+    // ── Destinations ─────────────────────────────────────────────────────────
+    MoPlan [label="MotionPlanner\nxQueueOverwrite\n(CMD MOVE v w)"  fillcolor="#fff3cd"]
+    ActMgr [label="ActuatorManager\ndirect call\n(CMD ACTUATOR id state)" fillcolor="#fff3cd"]
+
+    // ── Arêtes ───────────────────────────────────────────────────────────────
+    DEBUG  -> UART_HW [color="#336633" penwidth=2]
+    PC     -> USB_HW  [color="#336633" penwidth=2]
+
+    UART_HW -> URxISR  [label="HAL_UART_RxCpltCallback" style=dashed
+                        color="#888888" fontcolor="#888888"]
+    USB_HW  -> USRxISR [label="USB_CDC_RxHandler" style=dashed
+                        color="#888888" fontcolor="#888888"]
+
+    URxISR  -> RxQueue [label="xQueueSendFromISR  (1 octet)"
+                        color="#cc0000" fontcolor="#cc0000" penwidth=2]
+    USRxISR -> RxQueue [label="xQueueSendFromISR  (octet × len)"
+                        color="#cc0000" fontcolor="#cc0000" penwidth=2]
+
+    RxQueue -> RxTask  [label="xQueueReceive  (bloquant)"
+                        color="#cc0000" fontcolor="#cc0000" penwidth=2]
+
+    RxTask  -> MoPlan  [label="xQueueOverwrite" color="#334499" fontcolor="#334499" penwidth=2]
+    RxTask  -> ActMgr  [label="direct call"     color="#334499" fontcolor="#334499"]
+
+    // ── Mise en page ─────────────────────────────────────────────────────────
+    { rank=same; DEBUG; PC }
+    { rank=same; UART_HW; USB_HW }
+    { rank=same; URxISR; USRxISR }
+    { rank=same; MoPlan; ActMgr }
+}
+```
+
+---
+
+## Dependency Graph — TX path (Robot → PC)
+
+Flux de sortie : depuis n'importe quelle tâche qui publie sur IBus jusqu'à l'émission physique sur UART et USB CDC. Chaque canal dispose de son propre ring buffer et d'un mécanisme de pompage interruptible.
+
+> **Légende :** orange = chemin UART · violet = chemin USB CDC · bleu = tâche applicative · vert = périphérique HAL · tirets gris = callbacks ISR/CDC
+
+```dot
+digraph TxPath {
+    rankdir=TB
+    nodesep=0.9
+    ranksep=1.0
+    fontname="Helvetica"
+    node [fontname="Helvetica" fontsize=10 style=filled shape=box fillcolor="#dde8f5" color="#6688aa" penwidth=1.5]
+    edge [fontname="Helvetica" fontsize=9 color="#444444"]
+
+    // ── Producteurs IBus ─────────────────────────────────────────────────────
+    subgraph cluster_prod {
+        label="Tâches productrices"
+        style=filled fillcolor="#f8f8e8" color="#888833"
+        fontname="Helvetica" fontsize=10
+
+        OdoCtrl  [label="OdoControl\npublish(TELEMETRY)" fillcolor="#fff3cd"]
+        SenMgr   [label="SensorManager\npublish(ALERT/LOG)" fillcolor="#fff3cd"]
+        Monitor  [label="Monitoring\npublish(HEALTH/ALERT)" fillcolor="#fff3cd"]
+        Others   [label="autres tâches\npublish(LOG)" fillcolor="#fff3cd"]
+    }
+
+    // ── ExternalComm txTask ──────────────────────────────────────────────────
+    subgraph cluster_ec {
+        label="ExternalComm  (Task)"
+        style=filled fillcolor="#e8f0ff" color="#334499"
+        fontname="Helvetica" fontsize=10
+
+        TxQueues [label="TxQueueSet\n_telQueue(1) · _altQueue(1)\n_hltQueue(2) · _logQueue(4)"
+                  shape=cylinder fillcolor="#b0c4e8"]
+        TxTask   [label="txTask\n─────────────────\nxQueueSelectFromSet(bloquant)\nrécupère TxEntry\ntransmit() sur chaque canal\nselon policy (uart/usb/eth)"
+                  fillcolor="#c0d0f0"]
+    }
+
+    // ── UartChannel TX ───────────────────────────────────────────────────────
+    subgraph cluster_uart {
+        label="UartChannel  (Driver)"
+        style=filled fillcolor="#fff8ee" color="#cc8800"
+        fontname="Helvetica" fontsize=10
+
+        UTxRing [label="_txRingBuf[512]\n(ring circulaire)"
+                 shape=cylinder fillcolor="#ffe0a0"]
+        UTxPump [label="_pumpTx()\n─────────────────\ncopie ring → _txStagingBuf\nHAL_UART_Transmit_IT\n_txBusy = true"
+                 fillcolor="#fff3cc"]
+        UTxISR  [label="onTxComplete(huart)\n─────────────────\nISR context\n_txBusy = false\n_pumpTx()  ← vide le reste"
+                 fillcolor="#ffe8cc"]
+    }
+
+    // ── UsbCdcChannel TX ─────────────────────────────────────────────────────
+    subgraph cluster_usb {
+        label="UsbCdcChannel  (Driver)"
+        style=filled fillcolor="#f0f0ff" color="#5555cc"
+        fontname="Helvetica" fontsize=10
+
+        USTxRing [label="_txRingBuf[2048]\n(ring circulaire)"
+                  shape=cylinder fillcolor="#c8c8ff"]
+        USTxPump [label="_pumpTx()\n─────────────────\ncopie ring → _txStagingBuf\nCDC_Transmit_FS\n_txBusy = true"
+                  fillcolor="#ddddff"]
+        USTxISR  [label="onTxComplete()\n─────────────────\ncallback CDC\n_txBusy = false\n_pumpTx()  ← vide le reste"
+                  fillcolor="#d8d8ff"]
+    }
+
+    // ── Couche HAL ───────────────────────────────────────────────────────────
+    subgraph cluster_hw {
+        label="STM32 Hardware / HAL"
+        style=filled fillcolor="#eaf4ea" color="#336633"
+        fontname="Helvetica" fontsize=10
+
+        UART_HW [label="UART périphérique\nIT"    style=filled fillcolor="#c8e6c8"]
+        USB_HW  [label="USB FS périphérique\nCDC stack" style=filled fillcolor="#c8e6c8"]
+    }
+
+    // ── Acteurs externes ─────────────────────────────────────────────────────
+    DEBUG [shape=ellipse fillcolor="#f5f0dd" label=<<B>DEBUG</B><BR/><I><FONT POINT-SIZE="9">UART</FONT></I>>]
+    PC    [shape=ellipse fillcolor="#f5f0dd" label=<<B>PC</B><BR/><I><FONT POINT-SIZE="9">USB CDC</FONT></I>>]
+
+    // ── Arêtes ───────────────────────────────────────────────────────────────
+    OdoCtrl -> TxQueues [label="publish(TELEMETRY)\nxQueueOverwrite" color="#334499" fontcolor="#334499"]
+    SenMgr  -> TxQueues [label="publish(ALERT/LOG)\nxQueueOverwrite" color="#334499" fontcolor="#334499"]
+    Monitor -> TxQueues [label="publish(HEALTH)\nxQueueSend"        color="#334499" fontcolor="#334499"]
+    Others  -> TxQueues [label="publish(LOG)\nxQueueSend"           color="#334499" fontcolor="#334499"]
+
+    TxQueues -> TxTask  [label="xQueueSelectFromSet" color="#334499" fontcolor="#334499" penwidth=2]
+
+    // UART TX
+    TxTask  -> UTxRing  [label="transmit()\ntaskENTER_CRITICAL"
+                         color="#cc8800" fontcolor="#cc8800" penwidth=2]
+    UTxRing -> UTxPump  [color="#cc8800"]
+    UTxPump -> UART_HW  [label="HAL_UART_Transmit_IT"
+                         color="#336633" fontcolor="#336633" penwidth=2]
+    UART_HW -> UTxISR   [label="HAL_UART_TxCpltCallback" style=dashed
+                         color="#888888" fontcolor="#888888"]
+    UTxISR  -> UTxPump  [label="encore des octets ?" style=dashed
+                         color="#cc8800" fontcolor="#cc8800"]
+    UART_HW -> DEBUG    [color="#336633" penwidth=2]
+
+    // USB TX
+    TxTask   -> USTxRing [label="transmit()\ntaskENTER_CRITICAL"
+                          color="#5555cc" fontcolor="#5555cc" penwidth=2]
+    USTxRing -> USTxPump [color="#5555cc"]
+    USTxPump -> USB_HW   [label="CDC_Transmit_FS"
+                          color="#336633" fontcolor="#336633" penwidth=2]
+    USB_HW   -> USTxISR  [label="UsbCdcChannel_onTxComplete" style=dashed
+                          color="#888888" fontcolor="#888888"]
+    USTxISR  -> USTxPump [label="encore des octets ?" style=dashed
+                          color="#5555cc" fontcolor="#5555cc"]
+    USB_HW   -> PC       [color="#336633" penwidth=2]
+
+    // ── Mise en page ─────────────────────────────────────────────────────────
+    { rank=same; OdoCtrl; SenMgr; Monitor; Others }
+    { rank=same; UTxRing; USTxRing }
+    { rank=same; UTxPump; USTxPump }
+    { rank=same; UTxISR;  USTxISR  }
+    { rank=same; UART_HW; USB_HW   }
+    { rank=same; DEBUG;   PC       }
+}
+```

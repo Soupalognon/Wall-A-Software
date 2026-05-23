@@ -12,7 +12,7 @@ ExternalComm::CommSnapshot ExternalComm::latestSnapshot { };
 
 ExternalComm::ExternalComm(ICommChannel *uart, ICommChannel *usb, ICommChannel *eth,
 	IActuatorManager *actuatorMgr, QueueHandle_t motionMailbox,
-	Config::ChannelPolicy uartPolicy, Config::ChannelPolicy usbPolicy, Config::ChannelPolicy ethPolicy) :
+	Config::ComQueuePolicy uartPolicy, Config::ComQueuePolicy usbPolicy, Config::ComQueuePolicy ethPolicy) :
 	_uart(uart), _usb(usb), _eth(eth), _actuatorMgr(actuatorMgr), _motionMailbox(motionMailbox),
 	_uartPolicy(uartPolicy), _usbPolicy(usbPolicy), _ethPolicy(ethPolicy) {
 	_rxByteQueue = xQueueCreate(64, sizeof(uint8_t));
@@ -217,7 +217,7 @@ void ExternalComm::_processRxLine(const char *line, bool uartSource) {
 }
 
 void ExternalComm::_transmitAll(const char *msg, uint16_t len, Topic topic) {
-	auto allows = [](const Config::ChannelPolicy &p, Topic t) -> bool {
+	auto allows = [](const Config::ComQueuePolicy &p, Topic t) -> bool {
 		switch (t) {
 		case Topic::TELEMETRY: return p.tel;
 		case Topic::ALERT:     return p.alt;

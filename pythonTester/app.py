@@ -125,9 +125,9 @@ class App(tk.Tk):
         btn_bar.pack(side=tk.TOP, fill=tk.X, pady=(2, 0))
         ttk.Button(btn_bar, text='Tout cocher', command=self._check_all).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_bar, text='Tout décocher', command=self._uncheck_all).pack(side=tk.LEFT, padx=2)
-        cols = ('plot', 'domain', 'subdomain', 'variable', 'valeur', 'delta', 'heure')
-        labels = ('Aff.', 'Domaine', 'Sous-dom.', 'Variable', 'Valeur', 'Δ fenêtre', 'Heure')
-        widths = (35, 80, 90, 120, 90, 85, 80)
+        cols = ('plot', 'domain', 'subdomain', 'variable', 'valeur', 'delta', 'freq', 'freq_max', 'heure')
+        labels = ('Aff.', 'Domaine', 'Sous-dom.', 'Variable', 'Valeur', 'Δ fenêtre', 'Hz', 'Hz max', 'Heure')
+        widths = (35, 80, 90, 120, 90, 85, 55, 65, 80)
         self._tree = ttk.Treeview(frame, columns=cols, show='headings', height=6)
         for col, lbl, w in zip(cols, labels, widths):
             self._tree.heading(col, text=lbl)
@@ -560,7 +560,11 @@ class App(tk.Tk):
             else:
                 delta = '—'
             chk = '☑' if self._plot_enabled.get(key, False) else '☐'
-            row = (chk, domain, subdomain, var, f'{val:.5g}', delta, ts)
+            hz = self._store.freq_current.get(key)
+            hz_max = self._store.freq_max.get(key)
+            freq_str = f'{hz:.1f}' if hz is not None else '—'
+            freq_max_str = f'{hz_max:.1f}' if hz_max is not None else '—'
+            row = (chk, domain, subdomain, var, f'{val:.5g}', delta, freq_str, freq_max_str, ts)
             if key in self._tree_ids:
                 self._tree.item(self._tree_ids[key], values=row)
             else:
@@ -612,6 +616,10 @@ class App(tk.Tk):
 
     def _clear_history(self):
         self._store.reset()
+        self._tree.delete(*self._tree.get_children())
+        self._tree_ids.clear()
+        self._iid_to_key.clear()
+        self._plot_enabled.clear()
         self._ax.cla()
         self._ax.set_xlabel('Temps (s)', fontsize=8)
         self._ax.set_ylabel('Valeur', fontsize=8)

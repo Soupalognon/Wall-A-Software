@@ -9,6 +9,9 @@ class DataStore:
         self.history: dict[tuple, deque] = {}
         self.times: dict[tuple, deque] = {}
         self.current: dict[tuple, tuple] = {}  # key -> (value, timestamp_str)
+        self.freq_max: dict[tuple, float] = {}     # key -> max Hz observed
+        self.freq_current: dict[tuple, float] = {} # key -> current Hz (last interval)
+        self._last_t: dict[tuple, float] = {}      # key -> last timestamp for dt calc
         self._start: float | None = None
         self._frame_start_ms: float | None = None
         self.last_t: float = 0.0
@@ -17,6 +20,9 @@ class DataStore:
         self.history.clear()
         self.times.clear()
         self.current.clear()
+        self.freq_max.clear()
+        self.freq_current.clear()
+        self._last_t.clear()
         self._start = None
         self._frame_start_ms = None
         self.last_t = 0.0
@@ -43,3 +49,11 @@ class DataStore:
             self.history[key].append(val)
             self.times[key].append(t)
             self.current[key] = (val, ts_str)
+            if key in self._last_t:
+                dt = t - self._last_t[key]
+                if dt > 0:
+                    hz = 1.0 / dt
+                    self.freq_current[key] = hz
+                    if hz > self.freq_max.get(key, 0.0):
+                        self.freq_max[key] = hz
+            self._last_t[key] = t

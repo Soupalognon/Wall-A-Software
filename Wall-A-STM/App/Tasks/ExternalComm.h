@@ -38,9 +38,9 @@ public:
                  ICommChannel* eth,
                  IActuatorManager* actuatorMgr,
                  QueueHandle_t motionMailbox,
-                 Config::ChannelPolicy uartPolicy = Config::UART_POLICY,
-                 Config::ChannelPolicy usbPolicy  = Config::USB_POLICY,
-                 Config::ChannelPolicy ethPolicy  = Config::ETH_POLICY);
+                 Config::ComQueuePolicy uartPolicy = Config::UART_POLICY,
+                 Config::ComQueuePolicy usbPolicy  = Config::USB_POLICY,
+                 Config::ComQueuePolicy ethPolicy  = Config::ETH_POLICY);
 
     void publish(Topic topic, const char* payload) override;
     static void log_info(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -68,9 +68,9 @@ private:
     ICommChannel*     _eth;
     IActuatorManager* _actuatorMgr;
     QueueHandle_t     _motionMailbox;
-    Config::ChannelPolicy _uartPolicy;
-    Config::ChannelPolicy _usbPolicy;
-    Config::ChannelPolicy _ethPolicy;
+    Config::ComQueuePolicy _uartPolicy;
+    Config::ComQueuePolicy _usbPolicy;
+    Config::ComQueuePolicy _ethPolicy;
 
     QueueHandle_t    _rxByteQueue;
     QueueHandle_t    _telQueue;

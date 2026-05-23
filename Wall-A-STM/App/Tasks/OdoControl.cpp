@@ -102,16 +102,14 @@ void OdoControl::tickVelocity(Setpoint sp) {
 	_motor->setMotors(_leftDuty, _rightDuty);
 
 	if (Config::ENABLE_HIGH_SPEED_TUNING) {
-		ExternalComm::log_info(BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
-//		_bus->publish(Topic::TELEMETRY,
-//			BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
-//		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(now, odoSnap.v, odoSnap.w));
-//		_bus->publish(Topic::TELEMETRY,
-//			BusFormat::telOdoPose(now, odoSnap.x, odoSnap.y, odoSnap.angle));
-//		_bus->publish(Topic::TELEMETRY,
-//			BusFormat::telOdoWheelSpeed(now, odoSnap.vLeft, odoSnap.vRight));
-//		_bus->publish(Topic::TELEMETRY,
-//			BusFormat::telOdoMotorVoltage(now, odoSnap.voltLeft, odoSnap.voltRight));
+		//Send with log_info to be sure it is sent directly (not passing throw to txTask)
+		uint32_t now = HAL_GetTick();
+		ExternalComm::log_info(BusFormat::telOdoVelocity(now, _odom->getV(), _odom->getW()));
+		ExternalComm::log_info(
+			BusFormat::telOdoWheelSpeed(now, _odom->getVLeft(), _odom->getVRight()));
+		ExternalComm::log_info(
+			BusFormat::telOdoMotorVoltage(now, convertDutyToVolt(_leftDuty),
+				convertDutyToVolt(_rightDuty)));
 	}
 }
 
@@ -153,8 +151,15 @@ void OdoControl::tickPose(Setpoint sp) {
 	_motor->setMotors(_leftDuty, _rightDuty);
 
 	if (Config::ENABLE_HIGH_SPEED_TUNING) {
-		_bus->publish(Topic::TELEMETRY,
-			BusFormat::telOdoPose(HAL_GetTick(), _odom->getX(), _odom->getY(), _odom->getAngle()));
+		//Send with log_info to be sure it is sent directly (not passing throw to txTask)
+		uint32_t now = HAL_GetTick();
+		ExternalComm::log_info(
+			BusFormat::telOdoPose(now, _odom->getX(), _odom->getY(), _odom->getAngle()));
+		ExternalComm::log_info(
+			BusFormat::telOdoWheelSpeed(now, _odom->getVLeft(), _odom->getVRight()));
+		ExternalComm::log_info(
+			BusFormat::telOdoMotorVoltage(now, convertDutyToVolt(_leftDuty),
+				convertDutyToVolt(_rightDuty)));
 	}
 }
 

@@ -11,7 +11,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import serial.tools.list_ports
 
-from config import (DEFAULT_COM_PORT, BAUD_RATES, PLOT_WINDOW,
+from config import (DEFAULT_COM_PORT, BAUD_RATES, PLOT_WINDOW, DEFAULT_CHECKED_VARS,
                     VEL_V_MIN, VEL_V_MAX, VEL_W_MIN, VEL_W_MAX,
                     GAMEPAD_POLL_HZ, GAMEPAD_DEADZONE, GAMEPAD_AXIS_V, GAMEPAD_AXIS_W,
                     GAMEPAD_AXIS_TRIGGER, GAMEPAD_V_MAX_NORMAL, GAMEPAD_W_MAX_NORMAL)
@@ -32,7 +32,9 @@ class App(tk.Tk):
         self._store = DataStore()
         self._worker: SerialWorker | None = None
         self._tree_ids: dict[tuple, str] = {}
+        self._iid_to_key: dict[str, tuple] = {}
         self._plot_lines: dict = {}
+        self._plot_enabled: dict[tuple, bool] = {}
 
         # Variables partagées entre les deux onglets
         self._svar_vel_v   = tk.StringVar(value='0.0')
@@ -119,13 +121,18 @@ class App(tk.Tk):
     def _build_table(self, pane: tk.PanedWindow):
         frame = tk.Frame(pane)
         pane.add(frame, minsize=80, height=160)
-        cols = ('domain', 'subdomain', 'variable', 'valeur', 'delta', 'heure')
-        labels = ('Domaine', 'Sous-dom.', 'Variable', 'Valeur', 'Δ fenêtre', 'Heure')
-        widths = (80, 90, 120, 90, 85, 80)
+        btn_bar = tk.Frame(frame)
+        btn_bar.pack(side=tk.TOP, fill=tk.X, pady=(2, 0))
+        ttk.Button(btn_bar, text='Tout cocher', command=self._check_all).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_bar, text='Tout décocher', command=self._uncheck_all).pack(side=tk.LEFT, padx=2)
+        cols = ('plot', 'domain', 'subdomain', 'variable', 'valeur', 'delta', 'heure')
+        labels = ('Aff.', 'Domaine', 'Sous-dom.', 'Variable', 'Valeur', 'Δ fenêtre', 'Heure')
+        widths = (35, 80, 90, 120, 90, 85, 80)
         self._tree = ttk.Treeview(frame, columns=cols, show='headings', height=6)
         for col, lbl, w in zip(cols, labels, widths):
             self._tree.heading(col, text=lbl)
-            self._tree.column(col, width=w, anchor=tk.CENTER, minwidth=50)
+            self._tree.column(col, width=w, anchor=tk.CENTER, minwidth=30)
+        self._tree.bind('<Button-1>', self._on_tree_click)
         vsb = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self._tree.yview)
         self._tree.configure(yscrollcommand=vsb.set)
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
@@ -517,6 +524,31 @@ class App(tk.Tk):
 
     # ── Table ─────────────────────────────────────────────────────────
 
+    def _on_tree_click(self, event):
+        if self._tree.identify_column(event.x) != '#1':
+            return
+        row = self._tree.identify_row(event.y)
+        if not row:
+            return
+        key = self._iid_to_key.get(row)
+        if key is None:
+            return
+        self._plot_enabled[key] = not self._plot_enabled.get(key, False)
+        self._refresh_table()
+        self._refresh_plot()
+
+    def _check_all(self):
+        for key in self._tree_ids:
+            self._plot_enabled[key] = True
+        self._refresh_table()
+        self._refresh_plot()
+
+    def _uncheck_all(self):
+        for key in self._tree_ids:
+            self._plot_enabled[key] = False
+        self._refresh_table()
+        self._refresh_plot()
+
     def _refresh_table(self):
         t_now = self._store.last_t if (self._store._frame_start_ms is not None or self._store._start is not None) else None
         for key, (val, ts) in self._store.current.items():
@@ -527,18 +559,30 @@ class App(tk.Tk):
                 delta = f'{max(visible) - min(visible):.5g}' if visible else '—'
             else:
                 delta = '—'
-            row = (domain, subdomain, var, f'{val:.5g}', delta, ts)
+            chk = '☑' if self._plot_enabled.get(key, False) else '☐'
+            row = (chk, domain, subdomain, var, f'{val:.5g}', delta, ts)
             if key in self._tree_ids:
                 self._tree.item(self._tree_ids[key], values=row)
             else:
+                if key not in self._plot_enabled:
+                    self._plot_enabled[key] = any(
+                        key == entry or key[:len(entry)] == entry
+                        for entry in DEFAULT_CHECKED_VARS
+                    )
                 iid = self._tree.insert('', tk.END, values=row)
                 self._tree_ids[key] = iid
+                self._iid_to_key[iid] = key
 
     # ── Plot ──────────────────────────────────────────────────────────
 
     def _refresh_plot(self):
         need_legend = False
         for key, vals in self._store.history.items():
+            enabled = self._plot_enabled.get(key, False)
+            if key in self._plot_lines:
+                self._plot_lines[key].set_visible(enabled)
+            if not enabled:
+                continue
             ts = self._store.times[key]
             if len(vals) < 2:
                 continue
@@ -553,7 +597,8 @@ class App(tk.Tk):
             else:
                 self._plot_lines[key].set_xdata(xdata)
                 self._plot_lines[key].set_ydata(ydata)
-        if self._plot_lines:
+        visible_lines = [ln for ln in self._plot_lines.values() if ln.get_visible()]
+        if visible_lines:
             self._ax.relim()
             self._ax.autoscale_view(scalex=False)
             if self._store._frame_start_ms is not None or self._store._start is not None:

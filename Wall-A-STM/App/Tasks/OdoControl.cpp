@@ -101,9 +101,10 @@ void OdoControl::tickVelocity(Setpoint sp) {
 	_rightDuty = clamp(v + w, -1.0f, 1.0f);
 	_motor->setMotors(_leftDuty, _rightDuty);
 
-	if (Config::ENABLE_HIGH_SPEED_DEBUG) {
-		_bus->publish(Topic::TELEMETRY,
-			BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
+	if (Config::ENABLE_HIGH_SPEED_TUNING) {
+		ExternalComm::log_info(BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
+//		_bus->publish(Topic::TELEMETRY,
+//			BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
 //		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(now, odoSnap.v, odoSnap.w));
 //		_bus->publish(Topic::TELEMETRY,
 //			BusFormat::telOdoPose(now, odoSnap.x, odoSnap.y, odoSnap.angle));
@@ -151,7 +152,7 @@ void OdoControl::tickPose(Setpoint sp) {
 	_rightDuty = clamp(v + w, -1.0f, 1.0f);
 	_motor->setMotors(_leftDuty, _rightDuty);
 
-	if (Config::ENABLE_HIGH_SPEED_DEBUG) {
+	if (Config::ENABLE_HIGH_SPEED_TUNING) {
 		_bus->publish(Topic::TELEMETRY,
 			BusFormat::telOdoPose(HAL_GetTick(), _odom->getX(), _odom->getY(), _odom->getAngle()));
 	}

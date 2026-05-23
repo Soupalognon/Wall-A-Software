@@ -82,17 +82,14 @@ void Monitoring::checkOnce() {
 	if (odoSnap.motorError) {
 		_bus->publish(Topic::ALERT, "Motor Error!");
 	}
-//	if (odoSnap.v || odoSnap.w)
-	{
-		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(now, odoSnap.v, odoSnap.w));
-		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoPose(now, odoSnap.x, odoSnap.y, odoSnap.angle));
-		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoWheelSpeed(now, odoSnap.vLeft, odoSnap.vRight));
-		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoMotorVoltage(now, odoSnap.voltLeft, odoSnap.voltRight));
-//		ExternalComm::log_info(
-//			"x:%.2f, y:%.2f, angle:%.2f, vLeft:%.2f, vRight:%.2f, v:%.2f, w:%.2f, motorError:%d",
-//			odoSnap.x, odoSnap.y, odoSnap.angle, odoSnap.vLeft, odoSnap.vRight, odoSnap.v,
-//			odoSnap.w, odoSnap.motorError);
-	}
+
+	_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(now, odoSnap.v, odoSnap.w));
+	_bus->publish(Topic::TELEMETRY,
+		BusFormat::telOdoPose(now, odoSnap.x, odoSnap.y, odoSnap.angle));
+	_bus->publish(Topic::TELEMETRY,
+		BusFormat::telOdoWheelSpeed(now, odoSnap.vLeft, odoSnap.vRight));
+	_bus->publish(Topic::TELEMETRY,
+		BusFormat::telOdoMotorVoltage(now, odoSnap.voltLeft, odoSnap.voltRight));
 
 //	///////////////////////////////////////////////////////////////////////
 //    SensorManager::SensorSnapshot sensorSnap;

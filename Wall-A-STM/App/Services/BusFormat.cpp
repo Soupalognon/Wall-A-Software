@@ -4,7 +4,7 @@
 
 const char* BusFormat::telOdoPose(uint32_t timestamp, float x, float y, float angle) {
     static char buf[64];
-    snprintf(buf, sizeof(buf), "TEL ODO_POSE time:%ld x:%.2f y:%.2f w:%.2f\r\n", timestamp, x, y, angle);
+    snprintf(buf, sizeof(buf), "TEL ODO_POSE time:%ld x:%.2f y:%.2f yaw:%.2f\r\n", timestamp, x, y, angle);
     return buf;
 }
 

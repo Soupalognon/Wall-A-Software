@@ -7,7 +7,7 @@
 
 namespace Config {
 
-static constexpr bool ENABLE_HIGH_SPEED_DEBUG = false;
+static constexpr bool ENABLE_HIGH_SPEED_TUNING = true;
 
 // Task frequency
 static constexpr uint32_t ODO_FREQ_HZ = 200;
@@ -91,7 +91,9 @@ struct ChannelPolicy {
 };
 
 static constexpr ChannelPolicy UART_POLICY = { true,  false,  false,  false  };
-static constexpr ChannelPolicy USB_POLICY  = { false,  true,  true, true };
+static constexpr ChannelPolicy USB_POLICY  = { true,  false,  false, false };
+//static constexpr ChannelPolicy UART_POLICY = { true,  false,  false,  false  };
+//static constexpr ChannelPolicy USB_POLICY  = { false,  true,  true, true };
 static constexpr ChannelPolicy ETH_POLICY  = { false,  false,  false, false };
 
 }

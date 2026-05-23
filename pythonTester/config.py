@@ -1,3 +1,14 @@
+# Variables cochées par défaut dès leur première réception.
+# Format : (DOMAIN, SUBDOMAIN, variable) pour une variable précise,
+#           (DOMAIN, SUBDOMAIN)           pour toutes les variables du sous-domaine.
+# Sensible à la casse.
+DEFAULT_CHECKED_VARS: list[tuple[str, ...]] = [
+    ('TEL', 'ODO_VEL'),
+    # ('TEL', 'ODO_POSE'),
+    # ('TEL', 'ODO_SP'),
+    # ('TEL', 'ODO_VOLT')
+]
+
 MAX_POINTS = 500
 DEFAULT_COM_PORT = 'COM31'
 BAUD_RATES = ['9600', '19200', '38400', '57600', '115200', '230400', '460800', '921600']

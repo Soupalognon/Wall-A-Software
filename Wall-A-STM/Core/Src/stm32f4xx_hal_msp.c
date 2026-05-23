@@ -143,10 +143,10 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = ADC_SENSOR_1B1_Pin;
+    GPIO_InitStruct.Pin = ADC_SENSOR_4_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(ADC_SENSOR_1B1_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(ADC_SENSOR_4_GPIO_Port, &GPIO_InitStruct);
 
     /* ADC2 interrupt Init */
     HAL_NVIC_SetPriority(ADC_IRQn, 5, 0);
@@ -239,7 +239,7 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
     */
     HAL_GPIO_DeInit(GPIOC, ADC_SENSOR_2_Pin|ADC_SENSOR_1_Pin|ADC_SENSOR_3_Pin);
 
-    HAL_GPIO_DeInit(ADC_SENSOR_1B1_GPIO_Port, ADC_SENSOR_1B1_Pin);
+    HAL_GPIO_DeInit(ADC_SENSOR_4_GPIO_Port, ADC_SENSOR_4_Pin);
 
     /* ADC2 interrupt DeInit */
     /* USER CODE BEGIN ADC2:ADC_IRQn disable */

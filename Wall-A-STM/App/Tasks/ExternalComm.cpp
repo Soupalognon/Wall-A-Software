@@ -27,6 +27,10 @@ ExternalComm::ExternalComm(ICommChannel *uart, ICommChannel *usb, ICommChannel *
 	xQueueAddToSet(_hltQueue, _txQueueSet);
 	xQueueAddToSet(_logQueue, _txQueueSet);
 
+	if (_uart) _uart->startReceive(_rxByteQueue);
+	if (_usb)  _usb->startReceive(_rxByteQueue);
+	if (_eth)  _eth->startReceive(_rxByteQueue);
+
 	_instance = this;
 }
 

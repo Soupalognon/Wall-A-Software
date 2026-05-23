@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include "FreeRTOS.h"
-#include "Interfaces/IBus.h"
 
 namespace Config {
 

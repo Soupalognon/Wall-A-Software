@@ -95,8 +95,6 @@ static ExternalComm extComm { &uartCh, &usbCh, nullptr, &actuatorMgr, cmdMailbox
 static OdoControl odoCtrl { &odomHAL, &drv, &extComm, setpointMailbox };
 static MotionPlanner motionPlanner { &extComm, cmdMailbox, setpointMailbox };
 
-static uint8_t uartIsrBuf[1];
-
 static void blinkTaskFn(void*) {
 	for (;;) {
 		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
@@ -138,8 +136,6 @@ extern "C" void cppMain(void) {
 
 	xTaskCreate(blinkTaskFn, "Blink", configMINIMAL_STACK_SIZE, nullptr, 1, nullptr);
 
-	HAL_UART_Receive_IT(&huart1, uartIsrBuf, 1);
-
 	ExternalComm::log_info("Program start");
 
 	enable(true);
@@ -148,22 +144,6 @@ extern "C" void cppMain(void) {
 //	for (;;) {
 //		vTaskDelay(pdMS_TO_TICKS(1000));
 //	}
-}
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-	if (huart == uartCh.getInstance()) {
-		BaseType_t woken = pdFALSE;
-		xQueueSendFromISR(extComm.rxByteQueue(), uartIsrBuf, &woken);
-		HAL_UART_Receive_IT(huart, uartIsrBuf, 1);
-		portYIELD_FROM_ISR(woken);
-	}
-}
-
-void USB_CDC_RxHandler(uint8_t *Buf, uint32_t Len) {
-	BaseType_t woken = pdFALSE;
-	for (uint32_t i = 0; i < Len; i++)
-		xQueueSendFromISR(extComm.rxByteQueue(), &Buf[i], &woken);
-	portYIELD_FROM_ISR(woken);
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {

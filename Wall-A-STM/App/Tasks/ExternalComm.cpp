@@ -27,10 +27,6 @@ ExternalComm::ExternalComm(ICommChannel *uart, ICommChannel *usb, ICommChannel *
 	xQueueAddToSet(_hltQueue, _txQueueSet);
 	xQueueAddToSet(_logQueue, _txQueueSet);
 
-	if (_uart) _uart->startReceive(_rxByteQueue);
-	if (_usb)  _usb->startReceive(_rxByteQueue);
-	if (_eth)  _eth->startReceive(_rxByteQueue);
-
 	_instance = this;
 }
 
@@ -130,6 +126,13 @@ void ExternalComm::rxTask(void *arg) {
 	ExternalComm *self = static_cast<ExternalComm*>(arg);
 	uint8_t byte;
 
+	if (self->_uart)
+		self->_uart->startReceive(self->_rxByteQueue);
+	if (self->_usb)
+		self->_usb->startReceive(self->_rxByteQueue);
+	if (self->_eth)
+		self->_eth->startReceive(self->_rxByteQueue);
+
 	ExternalComm::log_info("rxTask: Init OK");
 	for (;;) {
 		if (xQueueReceive(self->_rxByteQueue, &byte, portMAX_DELAY) == pdTRUE) {
@@ -168,9 +171,6 @@ void ExternalComm::_processRxLine(const char *line, bool uartSource) {
 	(void) uartSource;
 	char cmdToken[16] { };
 	char verb[16] { };
-
-//	std::string echo = std::string("echo: ") + line + std::string("\n");
-//	publish(Topic::LOG, echo.c_str());
 
 	if (sscanf(line, "%15s %15s", cmdToken, verb) < 2)
 		return;

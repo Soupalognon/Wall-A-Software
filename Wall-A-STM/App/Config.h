@@ -4,24 +4,27 @@
 #include <cstdint>
 #include "FreeRTOS.h"
 
-namespace Config {
+#define ENABLE_HIGH_SPEED_TUNING false
 
-static constexpr bool ENABLE_HIGH_SPEED_TUNING = true;
+namespace Config {
 
 struct ComQueuePolicy {
 	bool log;
-    bool tel;
-    bool alt;
-    bool hlt;
+	bool tel;
+	bool alt;
+	bool hlt;
 };
 
+#if (ENABLE_HIGH_SPEED_TUNING == true)
 // Set a field to true to allow that topic on the channel, false to suppress it.
-static constexpr ComQueuePolicy UART_POLICY = { true,  false,  false,  false  };
-static constexpr ComQueuePolicy USB_POLICY  = { true,  false,  false, false };
-//static constexpr ChannelPolicy UART_POLICY = { true,  false,  false,  false  };
-//static constexpr ChannelPolicy USB_POLICY  = { false,  true,  true, true };
+static constexpr ComQueuePolicy UART_POLICY = { true, false, false, false };
+static constexpr ComQueuePolicy USB_POLICY = { true, false, false, false };
 static constexpr ComQueuePolicy ETH_POLICY  = { false,  false,  false, false };
-
+#else
+static constexpr ComQueuePolicy UART_POLICY = { true, false, false, false };
+static constexpr ComQueuePolicy USB_POLICY = { false, true, true, true };
+static constexpr ComQueuePolicy ETH_POLICY = { false, false, false, false };
+#endif
 
 // Task frequency
 static constexpr uint32_t ODO_FREQ_HZ = 200;

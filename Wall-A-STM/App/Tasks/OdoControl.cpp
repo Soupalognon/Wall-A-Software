@@ -101,7 +101,7 @@ void OdoControl::tickVelocity(Setpoint sp) {
 	_rightDuty = clamp(v + w, -1.0f, 1.0f);
 	_motor->setMotors(_leftDuty, _rightDuty);
 
-	if (Config::ENABLE_HIGH_SPEED_TUNING) {
+	if (ENABLE_HIGH_SPEED_TUNING) {
 		//Send with log_info to be sure it is sent directly (not passing throw to txTask)
 		uint32_t now = HAL_GetTick();
 		ExternalComm::log_info(BusFormat::telOdoVelocity(now, _odom->getV(), _odom->getW()));
@@ -150,7 +150,7 @@ void OdoControl::tickPose(Setpoint sp) {
 	_rightDuty = clamp(v + w, -1.0f, 1.0f);
 	_motor->setMotors(_leftDuty, _rightDuty);
 
-	if (Config::ENABLE_HIGH_SPEED_TUNING) {
+	if (ENABLE_HIGH_SPEED_TUNING) {
 		//Send with log_info to be sure it is sent directly (not passing throw to txTask)
 		uint32_t now = HAL_GetTick();
 		ExternalComm::log_info(

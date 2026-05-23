@@ -21,9 +21,9 @@ struct MoveCmd {
 };
 
 namespace AlarmBits {
-    static constexpr uint32_t SENSOR    = 0x0000FFFF; // bits 0-15: sensor index from SensorManager
-    static constexpr uint32_t OVERHEAT  = 1u << 16;   // from Monitoring
-    static constexpr uint32_t OVERCURRENT = 1u << 17; // from Monitoring
+static constexpr uint32_t SENSOR = 0x0000FFFF; // bits 0-15: sensor index from SensorManager
+static constexpr uint32_t OVERHEAT = 1u << 16;   // from Monitoring
+static constexpr uint32_t OVERCURRENT = 1u << 17; // from Monitoring
 }
 
 class MotionPlanner {

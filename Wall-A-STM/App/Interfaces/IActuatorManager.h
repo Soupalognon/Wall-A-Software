@@ -5,8 +5,8 @@
 
 class IActuatorManager {
 public:
-    virtual void commandById(uint8_t id, const char* cmd) = 0;
-    virtual ~IActuatorManager() = default;
+	virtual void commandById(uint8_t id, const char *cmd) = 0;
+	virtual ~IActuatorManager() = default;
 };
 
 #endif // APP_INTERFACES_IACTUATORMANAGER_H

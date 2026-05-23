@@ -13,8 +13,9 @@ public:
 
 	HAL_StatusTypeDef transmit(const char *data, uint16_t len) override;
 
-
-	UART_HandleTypeDef* getInstance() { return _huart; }
+	UART_HandleTypeDef* getInstance() {
+		return _huart;
+	}
 
 	void startReceive(QueueHandle_t rxQueue) override;
 
@@ -28,7 +29,7 @@ private:
 	UART_HandleTypeDef *_huart;
 
 	QueueHandle_t _rxQueue = nullptr;
-	uint8_t _rxIsrBuf[1] = {};
+	uint8_t _rxIsrBuf[1] = { };
 
 	uint8_t _txRingBuf[TX_BUF_SIZE];
 	uint8_t _txStagingBuf[TX_BUF_SIZE];
@@ -38,7 +39,7 @@ private:
 
 	void _pumpTx();
 
-	static UartChannel* _instances[MAX_INSTANCES];
+	static UartChannel *_instances[MAX_INSTANCES];
 	static size_t _instanceCount;
 };
 

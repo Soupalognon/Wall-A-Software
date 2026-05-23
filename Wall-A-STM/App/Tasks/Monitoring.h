@@ -15,7 +15,8 @@
 
 class Monitoring {
 public:
-	Monitoring(IBus *bus, InternalTemperature* internalTemp, MotorCurrentSense* motorCurrentSense, TaskHandle_t motionPlannerHandle);
+	Monitoring(IBus *bus, InternalTemperature *internalTemp, MotorCurrentSense *motorCurrentSense,
+		TaskHandle_t motionPlannerHandle);
 	static void task(void *param);
 	void checkOnce();
 
@@ -23,8 +24,8 @@ public:
 
 private:
 	IBus *_bus;
-	InternalTemperature* _internalTemperatures;
-	MotorCurrentSense* _motorCurrentSense;
+	InternalTemperature *_internalTemperatures;
+	MotorCurrentSense *_motorCurrentSense;
 	TaskHandle_t _motionPlannerHandle;
 
 };

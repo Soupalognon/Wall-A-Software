@@ -9,13 +9,15 @@
 
 class UsbCdcChannel: public ICommChannel {
 public:
-	UsbCdcChannel(USBD_HandleTypeDef* hUsbDeviceFS): _usb(hUsbDeviceFS) {
+	UsbCdcChannel(USBD_HandleTypeDef *hUsbDeviceFS) :
+		_usb(hUsbDeviceFS) {
 		_instance = this;
 	}
 	HAL_StatusTypeDef transmit(const char *data, uint16_t len) override;
 
-
-	void startReceive(QueueHandle_t rxQueue) override { _rxQueue = rxQueue; }
+	void startReceive(QueueHandle_t rxQueue) override {
+		_rxQueue = rxQueue;
+	}
 
 	static void onTxComplete();
 	static void onRxData(uint8_t *buf, uint32_t len);
@@ -34,7 +36,7 @@ private:
 
 	void _pumpTx();
 
-	static UsbCdcChannel* _instance;
+	static UsbCdcChannel *_instance;
 };
 
 #endif // APP_DRIVERS_USBCDCCHANNEL_H

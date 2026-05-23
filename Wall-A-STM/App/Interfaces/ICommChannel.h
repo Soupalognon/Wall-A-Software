@@ -9,7 +9,8 @@
 class ICommChannel {
 public:
 	virtual HAL_StatusTypeDef transmit(const char *data, uint16_t len) = 0;
-	virtual void startReceive(QueueHandle_t) {}
+	virtual void startReceive(QueueHandle_t) {
+	}
 	virtual ~ICommChannel() = default;
 };
 

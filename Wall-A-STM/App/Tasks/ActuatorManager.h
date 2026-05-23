@@ -7,16 +7,18 @@
 #include "Config.h"
 #include <cstdint>
 
-class ActuatorManager : public IActuatorManager {
+class ActuatorManager: public IActuatorManager {
 public:
-    ActuatorManager(IActuator** actuators, uint8_t actuatorCount, IBus* bus);
-    void commandById(uint8_t id, const char* cmd) override;
-    void setBus(IBus* bus) { _bus = bus; }
+	ActuatorManager(IActuator **actuators, uint8_t actuatorCount, IBus *bus);
+	void commandById(uint8_t id, const char *cmd) override;
+	void setBus(IBus *bus) {
+		_bus = bus;
+	}
 
 private:
-    IActuator** _actuators;
-    uint8_t     _actuatorCount;
-    IBus*       _bus;
+	IActuator **_actuators;
+	uint8_t _actuatorCount;
+	IBus *_bus;
 };
 
 #endif // APP_TASKS_ACTUATORMANAGER_H

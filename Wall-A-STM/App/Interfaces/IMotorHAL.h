@@ -3,10 +3,10 @@
 
 class IMotorHAL {
 public:
-    virtual ~IMotorHAL() = default;
-    virtual bool begin() = 0;
-    virtual void setMotors(float left, float right) = 0;
-    virtual bool isError() = 0;
+	virtual ~IMotorHAL() = default;
+	virtual bool begin() = 0;
+	virtual void setMotors(float left, float right) = 0;
+	virtual bool isError() = 0;
 };
 
 #endif // APP_INTERFACES_IMOTORHAL_H

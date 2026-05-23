@@ -11,10 +11,10 @@ ExternalComm *ExternalComm::_instance = nullptr;
 ExternalComm::CommSnapshot ExternalComm::latestSnapshot { };
 
 ExternalComm::ExternalComm(ICommChannel *uart, ICommChannel *usb, ICommChannel *eth,
-	IActuatorManager *actuatorMgr, QueueHandle_t motionMailbox,
-	Config::ComQueuePolicy uartPolicy, Config::ComQueuePolicy usbPolicy, Config::ComQueuePolicy ethPolicy) :
-	_uart(uart), _usb(usb), _eth(eth), _actuatorMgr(actuatorMgr), _motionMailbox(motionMailbox),
-	_uartPolicy(uartPolicy), _usbPolicy(usbPolicy), _ethPolicy(ethPolicy) {
+	IActuatorManager *actuatorMgr, QueueHandle_t motionMailbox, Config::ComQueuePolicy uartPolicy,
+	Config::ComQueuePolicy usbPolicy, Config::ComQueuePolicy ethPolicy) :
+	_uart(uart), _usb(usb), _eth(eth), _actuatorMgr(actuatorMgr), _motionMailbox(motionMailbox), _uartPolicy(
+		uartPolicy), _usbPolicy(usbPolicy), _ethPolicy(ethPolicy) {
 	_rxByteQueue = xQueueCreate(64, sizeof(uint8_t));
 	_telQueue = xQueueCreate(1, sizeof(TxEntry));
 	_altQueue = xQueueCreate(1, sizeof(TxEntry));
@@ -111,10 +111,14 @@ void ExternalComm::txTask(void *arg) {
 		QueueHandle_t q = xQueueSelectFromSet(self->_txQueueSet, portMAX_DELAY);
 		if (q != nullptr && xQueueReceive(q, &entry, 0) == pdTRUE) {
 			Topic topic;
-			if      (q == self->_telQueue) topic = Topic::TELEMETRY;
-			else if (q == self->_altQueue) topic = Topic::ALERT;
-			else if (q == self->_hltQueue) topic = Topic::HEALTH;
-			else                           topic = Topic::LOG;
+			if (q == self->_telQueue)
+				topic = Topic::TELEMETRY;
+			else if (q == self->_altQueue)
+				topic = Topic::ALERT;
+			else if (q == self->_hltQueue)
+				topic = Topic::HEALTH;
+			else
+				topic = Topic::LOG;
 
 			uint16_t len = static_cast<uint16_t>(strlen(entry.buf));
 			self->_transmitAll(entry.buf, len, topic);
@@ -223,14 +227,22 @@ void ExternalComm::_processRxLine(const char *line, bool uartSource) {
 void ExternalComm::_transmitAll(const char *msg, uint16_t len, Topic topic) {
 	auto allows = [](const Config::ComQueuePolicy &p, Topic t) -> bool {
 		switch (t) {
-		case Topic::TELEMETRY: return p.tel;
-		case Topic::ALERT:     return p.alt;
-		case Topic::LOG:       return p.log;
-		case Topic::HEALTH:    return p.hlt;
-		default:               return false;
+		case Topic::TELEMETRY:
+			return p.tel;
+		case Topic::ALERT:
+			return p.alt;
+		case Topic::LOG:
+			return p.log;
+		case Topic::HEALTH:
+			return p.hlt;
+		default:
+			return false;
 		}
 	};
-	if (_usb  && allows(_usbPolicy,  topic)) _usb->transmit(msg, len);
-	if (_uart && allows(_uartPolicy, topic)) _uart->transmit(msg, len);
-	if (_eth  && allows(_ethPolicy,  topic)) _eth->transmit(msg, len);
+	if (_usb && allows(_usbPolicy, topic))
+		_usb->transmit(msg, len);
+	if (_uart && allows(_uartPolicy, topic))
+		_uart->transmit(msg, len);
+	if (_eth && allows(_ethPolicy, topic))
+		_eth->transmit(msg, len);
 }

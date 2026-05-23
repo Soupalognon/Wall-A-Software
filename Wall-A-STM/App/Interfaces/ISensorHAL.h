@@ -3,8 +3,8 @@
 
 class ISensorHAL {
 public:
-    virtual float read() = 0;  // raw sensor value
-    virtual ~ISensorHAL() = default;
+	virtual float read() = 0;  // raw sensor value
+	virtual ~ISensorHAL() = default;
 };
 
 #endif // APP_INTERFACES_ISENSORHAL_H

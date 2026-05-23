@@ -7,7 +7,10 @@
 
 class Encoder: public IEncoderHAL {
 public:
-	Encoder(TIM_HandleTypeDef *htim) : _htim(htim) {};
+	Encoder(TIM_HandleTypeDef *htim) :
+		_htim(htim) {
+	}
+	;
 	bool init();
 	int32_t getTicks(); // extended 32-bit position, must be called regularly (delta < 32767 ticks between calls)
 

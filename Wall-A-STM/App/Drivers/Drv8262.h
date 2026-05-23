@@ -5,7 +5,7 @@
 #include <cstdint>
 #include "Interfaces/IMotorHAL.h"
 
-class Drv8262 : public IMotorHAL {
+class Drv8262: public IMotorHAL {
 public:
 	Drv8262() = default;
 

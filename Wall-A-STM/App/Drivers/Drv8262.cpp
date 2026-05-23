@@ -71,7 +71,8 @@ void Drv8262::enable(bool en) {
 //	ExternalComm::log_info("Drv8262: PRI_MOTOR_SLEEP = %s", en ? "HIGH" : "LOW");
 }
 
-void Drv8262::reset() {}
+void Drv8262::reset() {
+}
 
 void Drv8262::stop() {
 	setLeftDuty(0.0f);

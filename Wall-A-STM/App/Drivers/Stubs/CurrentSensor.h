@@ -6,17 +6,17 @@
 #include "Config.h"
 #include <cstdint>
 
-class CurrentSensor : public ISensor {
+class CurrentSensor: public ISensor {
 public:
-    CurrentSensor(uint8_t id, ISensorHAL* hal);
-    uint8_t     id()   const override;
-    const char* name() const override;
-    float       read()       override;
-    bool        isAlarm()    override;
+	CurrentSensor(uint8_t id, ISensorHAL *hal);
+	uint8_t id() const override;
+	const char* name() const override;
+	float read() override;
+	bool isAlarm() override;
 private:
-    uint8_t     _id;
-    ISensorHAL* _hal;
-    float       _lastValue;
+	uint8_t _id;
+	ISensorHAL *_hal;
+	float _lastValue;
 };
 
 #endif // APP_DRIVERS_CURRENTSENSOR_H

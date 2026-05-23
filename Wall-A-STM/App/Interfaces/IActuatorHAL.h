@@ -3,8 +3,8 @@
 
 class IActuatorHAL {
 public:
-    virtual void set(float value) = 0;
-    virtual ~IActuatorHAL() = default;
+	virtual void set(float value) = 0;
+	virtual ~IActuatorHAL() = default;
 };
 
 #endif // APP_INTERFACES_IACTUATORHAL_H

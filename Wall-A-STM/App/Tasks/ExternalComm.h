@@ -2,6 +2,7 @@
 #define APP_TASKS_EXTERNALCOMM_H
 
 #include "Interfaces/IBus.h"
+#include "Config.h"
 #include "Interfaces/IActuatorManager.h"
 #include "Interfaces/ICommChannel.h"
 #include <FreeRTOS.h>
@@ -36,7 +37,10 @@ public:
                  ICommChannel* usb,
                  ICommChannel* eth,
                  IActuatorManager* actuatorMgr,
-                 QueueHandle_t motionMailbox);
+                 QueueHandle_t motionMailbox,
+                 Config::ChannelPolicy uartPolicy = Config::UART_POLICY,
+                 Config::ChannelPolicy usbPolicy  = Config::USB_POLICY,
+                 Config::ChannelPolicy ethPolicy  = Config::ETH_POLICY);
 
     void publish(Topic topic, const char* payload) override;
     static void log_info(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -64,6 +68,9 @@ private:
     ICommChannel*     _eth;
     IActuatorManager* _actuatorMgr;
     QueueHandle_t     _motionMailbox;
+    Config::ChannelPolicy _uartPolicy;
+    Config::ChannelPolicy _usbPolicy;
+    Config::ChannelPolicy _ethPolicy;
 
     QueueHandle_t    _rxByteQueue;
     QueueHandle_t    _telQueue;
@@ -78,7 +85,7 @@ private:
     QueueHandle_t _queueForTopic(Topic t) const;
     void _processRxLine(const char* line, bool uartSource);
     void _feedAccum(RxAccum& acc, const char* data, uint16_t len, bool uartSource);
-    void _transmitAll(const char* msg, uint16_t len, bool includeUsb);
+    void _transmitAll(const char* msg, uint16_t len, Topic topic);
 };
 
 #endif // APP_TASKS_EXTERNALCOMM_H

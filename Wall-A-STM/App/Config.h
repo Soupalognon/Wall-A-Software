@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "FreeRTOS.h"
+#include "Interfaces/IBus.h"
 
 namespace Config {
 
@@ -79,6 +80,19 @@ static constexpr UBaseType_t PRIO_EXTCOMM_RX = 5;
 static constexpr UBaseType_t PRIO_EXTCOMM_TX = 4;
 static constexpr UBaseType_t PRIO_SENSOR_MANAGER = 3;
 static constexpr UBaseType_t PRIO_MONITORING = 2;
+
+// Per-channel topic subscription policy.
+// Set a field to true to allow that topic on the channel, false to suppress it.
+struct ChannelPolicy {
+	bool log;
+    bool tel;
+    bool alt;
+    bool hlt;
+};
+
+static constexpr ChannelPolicy UART_POLICY = { true,  false,  false,  false  };
+static constexpr ChannelPolicy USB_POLICY  = { false,  true,  true, true };
+static constexpr ChannelPolicy ETH_POLICY  = { false,  false,  false, false };
 
 }
 

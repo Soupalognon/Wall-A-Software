@@ -13,5 +13,5 @@ void ActuatorManager::commandById(uint8_t id, const char* cmd) {
             return;
         }
     }
-    _bus->publish(Topic::LOG, BusFormat::logWarn("unknown actuator id"));
+//    _bus->publish(Topic::LOG, BusFormat::logWarn("unknown actuator id"));
 }

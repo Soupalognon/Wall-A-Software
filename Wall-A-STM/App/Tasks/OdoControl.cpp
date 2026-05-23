@@ -18,6 +18,8 @@ void OdoControl::reset() {
 	_pidAngle.reset();
 	_spFilteredV = 0.0f;
 	_spFilteredW = 0.0f;
+	_leftDuty = 0.0f;
+	_rightDuty = 0.0f;
 }
 
 void OdoControl::task(void *param) {
@@ -58,18 +60,14 @@ void OdoControl::routine() {
 			tickVelocity(sp);
 		else if (sp.mode == SetpointMode::POSE)
 			tickPose(sp);
-
-//		_bus->publish(Topic::TELEMETRY,
-//			BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
-		////	_bus->publish(Topic::TELEMETRY,
-		////				BusFormat::telOdoPose(HAL_GetTick(), _odom->getX(), _odom->getY(), _odom->getAngle()));
 	} else {
 		reset();
 	}
 
 	if (_tickCount % Config::TELEM_DIVIDER == 0) {
-//		latestSnapshot = { _odom->getX(), _odom->getY(), _odom->getAngle(), _odom->getVLeft(),
-//			_odom->getVRight(), _odom->getV(), _odom->getW(), _motor->isError(), HAL_GetTick() };
+		latestSnapshot = { _odom->getX(), _odom->getY(), _odom->getAngle(), _odom->getV(),
+			_odom->getW(), _odom->getVLeft(), _odom->getVRight(), convertDutyToVolt(_leftDuty),
+			convertDutyToVolt(_rightDuty), _motor->isError(), HAL_GetTick() };
 	}
 }
 
@@ -99,9 +97,21 @@ void OdoControl::tickVelocity(Setpoint sp) {
 	v = clamp(v, -Config::MAX_DUTY, Config::MAX_DUTY);
 	w = clamp(w, -Config::MAX_DUTY, Config::MAX_DUTY);
 
-	float leftDuty = clamp(v - w, -1.0f, 1.0f);
-	float rightDuty = clamp(v + w, -1.0f, 1.0f);
-	_motor->setMotors(leftDuty, rightDuty);
+	_leftDuty = clamp(v - w, -1.0f, 1.0f);
+	_rightDuty = clamp(v + w, -1.0f, 1.0f);
+	_motor->setMotors(_leftDuty, _rightDuty);
+
+	if (Config::ENABLE_HIGH_SPEED_DEBUG) {
+		_bus->publish(Topic::TELEMETRY,
+			BusFormat::telOdoVelocity(HAL_GetTick(), _odom->getV(), _odom->getW()));
+//		_bus->publish(Topic::TELEMETRY, BusFormat::telOdoVelocity(now, odoSnap.v, odoSnap.w));
+//		_bus->publish(Topic::TELEMETRY,
+//			BusFormat::telOdoPose(now, odoSnap.x, odoSnap.y, odoSnap.angle));
+//		_bus->publish(Topic::TELEMETRY,
+//			BusFormat::telOdoWheelSpeed(now, odoSnap.vLeft, odoSnap.vRight));
+//		_bus->publish(Topic::TELEMETRY,
+//			BusFormat::telOdoMotorVoltage(now, odoSnap.voltLeft, odoSnap.voltRight));
+	}
 }
 
 void OdoControl::tickPose(Setpoint sp) {
@@ -137,9 +147,14 @@ void OdoControl::tickPose(Setpoint sp) {
 	v = clamp(v, -Config::MAX_DUTY, Config::MAX_DUTY);
 	w = clamp(w, -Config::MAX_DUTY, Config::MAX_DUTY);
 
-	float leftDuty = clamp(v - w, -1.0f, 1.0f);
-	float rightDuty = clamp(v + w, -1.0f, 1.0f);
-	_motor->setMotors(leftDuty, rightDuty);
+	_leftDuty = clamp(v - w, -1.0f, 1.0f);
+	_rightDuty = clamp(v + w, -1.0f, 1.0f);
+	_motor->setMotors(_leftDuty, _rightDuty);
+
+	if (Config::ENABLE_HIGH_SPEED_DEBUG) {
+		_bus->publish(Topic::TELEMETRY,
+			BusFormat::telOdoPose(HAL_GetTick(), _odom->getX(), _odom->getY(), _odom->getAngle()));
+	}
 }
 
 void OdoControl::setPidGains(float P, float I, float D) {
@@ -162,4 +177,8 @@ void OdoControl::setPidAngleGains(float P, float I, float D) {
 		return;
 	ExternalComm::log_info("OdoControl: Set PID angle gains");
 	_instance->_pidAngle.setGains(P, I, D);
+}
+
+float OdoControl::convertDutyToVolt(float duty) {
+	return duty * Config::MOTOR_SUPPLY_VOLTAGE;
 }

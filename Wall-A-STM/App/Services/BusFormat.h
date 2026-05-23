@@ -10,8 +10,6 @@ public:
     static const char* telOdoMotorVoltage(uint32_t timestamp, float voltLeft, float voltRight);
     static const char* telOdoWheelSpeed(uint32_t timestamp, float vLeft, float vRight);
     static const char* altProximity(float dist);
-    static const char* logInfo(const char* msg);
-    static const char* logWarn(const char* msg);
     static const char* hltTemp(float t);
     static const char* evtArrival();
     static const char* altAlarm(uint32_t bitmask);

@@ -51,7 +51,7 @@ void MotionPlanner::processCmd(const MoveCmd &cmd) {
 		sp.mode = SetpointMode::POSE;
 		sp.pose = { cmd.x, cmd.y, cmd.angle };
 	} else if (cmd.mode == MoveCmdMode::VELOCITY) {
-		sp.mode = SetpointMode::POSE;
+		sp.mode = SetpointMode::VELOCITY;
 		sp.velocity = { cmd.v, cmd.w };
 	} else if (cmd.mode == MoveCmdMode::STOP) {
 		xQueueReset(_setpointMailbox);

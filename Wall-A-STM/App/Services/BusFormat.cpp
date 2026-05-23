@@ -4,43 +4,31 @@
 
 const char* BusFormat::telOdoPose(uint32_t timestamp, float x, float y, float angle) {
     static char buf[64];
-    snprintf(buf, sizeof(buf), "TEL ODO time:%ld x:%.2f y:%.2f w:%.2f\r\n", timestamp, x, y, angle);
+    snprintf(buf, sizeof(buf), "TEL ODO_POSE time:%ld x:%.2f y:%.2f w:%.2f\r\n", timestamp, x, y, angle);
     return buf;
 }
 
 const char* BusFormat::telOdoVelocity(uint32_t timestamp, float v, float w) {
     static char buf[64];
-    snprintf(buf, sizeof(buf), "TEL ODO time:%ld v:%.2f w:%.2f\r\n", timestamp, v, w);
+    snprintf(buf, sizeof(buf), "TEL ODO_VEL time:%ld v:%.2f w:%.2f\r\n", timestamp, v, w);
     return buf;
 }
 
 const char* BusFormat::telOdoMotorVoltage(uint32_t timestamp, float voltLeft, float voltRight) {
     static char buf[64];
-    snprintf(buf, sizeof(buf), "TEL ODO time:%ld voltLeft:%.2f voltRight:%.2f\r\n", timestamp, voltLeft, voltRight);
+    snprintf(buf, sizeof(buf), "TEL ODO_VOLT time:%ld voltLeft:%.2f voltRight:%.2f\r\n", timestamp, voltLeft, voltRight);
     return buf;
 }
 
 const char* BusFormat::telOdoWheelSpeed(uint32_t timestamp, float vLeft, float vRight) {
     static char buf[64];
-    snprintf(buf, sizeof(buf), "TEL ODO time:%ld vLeft:%.3f, vRight:%.3f\r\n", timestamp, vLeft, vRight);
+    snprintf(buf, sizeof(buf), "TEL ODO_SP time:%ld vLeft:%.3f, vRight:%.3f\r\n", timestamp, vLeft, vRight);
     return buf;
 }
 
 const char* BusFormat::altProximity(float dist) {
     static char buf[64];
     snprintf(buf, sizeof(buf), "ALT PROXIMITY %.2f\r\n", dist);
-    return buf;
-}
-
-const char* BusFormat::logInfo(const char* msg) {
-    static char buf[64];
-    snprintf(buf, sizeof(buf), "LOG INFO %s\r\n", msg);
-    return buf;
-}
-
-const char* BusFormat::logWarn(const char* msg) {
-    static char buf[64];
-    snprintf(buf, sizeof(buf), "LOG WARN %s\r\n", msg);
     return buf;
 }
 

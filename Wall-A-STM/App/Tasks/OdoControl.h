@@ -37,10 +37,12 @@ public:
 		float x { };
 		float y { };
 		float angle { };
-		float vLeft { };
-		float vRight { };
 		float v { };
 		float w { };
+		float vLeft { };
+		float vRight { };
+		float voltLeft { };
+		float voltRight { };
 		bool motorError { };
 		uint32_t timestamp { };
 	};
@@ -62,20 +64,24 @@ private:
 
 	Pid _pidSpeed { Config::PID_KP_DEFAULT, Config::PID_KI_DEFAULT, Config::PID_KD_DEFAULT,
 		Config::PID_I_MAX_SPEED };
-	Pid _pidAngle { Config::PID_KP_ANGLE_DEFAULT, Config::PID_KI_ANGLE_DEFAULT, Config::PID_KD_ANGLE_DEFAULT,
-		Config::PID_I_MAX_ANGLE };
+	Pid _pidAngle { Config::PID_KP_ANGLE_DEFAULT, Config::PID_KI_ANGLE_DEFAULT,
+		Config::PID_KD_ANGLE_DEFAULT, Config::PID_I_MAX_ANGLE };
 
 	float _spFilteredV = 0.0f;
 	float _spFilteredW = 0.0f;
 
+	float _leftDuty = 0.0;
+	float _rightDuty = 0.0;
+
 	uint32_t _tickCount = 0;
 
-	static OdoControl* _instance;
+	static OdoControl *_instance;
 
 	void reset();
 	void routine();
 	void tickPose(Setpoint sp);
 	void tickVelocity(Setpoint sp);
+	float convertDutyToVolt(float duty);
 };
 
 #endif // APP_TASKS_ODOCONTROL_H

@@ -6,13 +6,15 @@
 
 namespace Config {
 
+static constexpr bool ENABLE_HIGH_SPEED_DEBUG = false;
+
 // Task frequency
 static constexpr uint32_t ODO_FREQ_HZ = 200;
 static constexpr uint32_t MONITORING_FREQ_HZ = 10;
 static constexpr uint32_t SENSOR_FREQ_HZ = 10;
 
 // Fixed array bounds (NFR-02 - no dynamic allocation)
-static constexpr uint8_t MAX_SENSORS = 15;		//WARN: If you touch this value you must modify "Wall-A-STM\App\Tasks\MotionPlanner.h" --> AlarmBits --> SENSOR table
+static constexpr uint8_t MAX_SENSORS = 15; //WARN: If you touch this value you must modify "Wall-A-STM\App\Tasks\MotionPlanner.h" --> AlarmBits --> SENSOR table
 static constexpr uint8_t MAX_ACTUATORS = 10;
 
 // PID defaults — speed (linear velocity)
@@ -34,6 +36,7 @@ static constexpr float D_PER_TICK = (2.0f * 3.14159265f * WHEEL_RADIUS_M)
 	/ (static_cast<float>(TICKS_PER_REV) * static_cast<float>(MOTO_REDUCTION_RATIO));
 
 // OdoControl tuning constants
+static constexpr float MOTOR_SUPPLY_VOLTAGE = 24.0f;
 static constexpr float ARRIVAL_THRESHOLD = 0.02f;
 static constexpr float PID_I_MAX_SPEED = 1.0f;
 static constexpr float PID_I_MAX_ANGLE = 0.5f;

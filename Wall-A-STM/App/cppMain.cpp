@@ -6,21 +6,21 @@
 #include "Tasks/OdoControl.h"
 #include "Tasks/SensorManager.h"
 #include "Tasks/ExternalComm.h"
-#include "Tasks/ActuatorManager.h"
 #include "Tasks/Monitoring.h"
 
 #include "Drivers/Drv8262.h"
 #include "Drivers/UartChannel.h"
 #include "Drivers/UsbCdcChannel.h"
 #include "Drivers/Encoder.h"
-#include "Drivers/InternalTemperature.h"
-#include "Drivers/MotorCurrentSense.h"
-#include "Drivers/AnalogSensor.h"
+
+#include "Services/Odometry.h"
+#include "Services/ActuatorManager.h"
+#include "Services/InternalTemperature.h"
+#include "Services/MotorCurrentSense.h"
+#include "Services/AnalogSensor.h"
 
 #include "Interfaces/IEncoderHAL.h"
 #include "Interfaces/IMotorHAL.h"
-
-#include "Services/Odometry.h"
 
 #include "Config.h"
 #include "main.h"
@@ -51,22 +51,22 @@ static QueueHandle_t cmdMailbox = xQueueCreate(1, sizeof(MoveCmd));
 static QueueHandle_t setpointMailbox = xQueueCreate(1, sizeof(Setpoint));
 
 // ── Sensors InternalTemperature (hadc3 — 3 canaux) ───────────────────────────
-static AnalogSensor intTempPri { SensorType::PrimaryMotorTemp, "TEMP_PRI", &internalTemperatures, 0,
-	Config::TEMP_ALARM_C };
+static AnalogSensor intTempPri { SensorType::PrimaryMotorTemp, "TEMP_PRI", &internalTemperatures,
+	InternalTemperature::PRIMARY_MOTOR, Config::TEMP_ALARM_C };
 static AnalogSensor intTempSec { SensorType::SecondaryMotorTemp, "TEMP_SEC", &internalTemperatures,
-	1, Config::TEMP_ALARM_C };
-static AnalogSensor intTempPwr { SensorType::PowerSupplyTemp, "TEMP_PWR", &internalTemperatures, 2,
-	Config::TEMP_ALARM_C };
+	InternalTemperature::SECONDARY_MOTOR, Config::TEMP_ALARM_C };
+static AnalogSensor intTempPwr { SensorType::PowerSupplyTemp, "TEMP_PWR", &internalTemperatures,
+	InternalTemperature::POWER_SUPPLIES, Config::TEMP_ALARM_C };
 
 // ── Sensors MotorCurrentSense (hadc1 — 4 canaux) ─────────────────────────────
-static AnalogSensor curPL { SensorType::PrimaryMotorCurrentL, "CUR_PL", &motorsCurrentSense, 0,
-	Config::CURRENT_ALARM_A };
-static AnalogSensor curPR { SensorType::PrimaryMotorCurrentR, "CUR_PR", &motorsCurrentSense, 1,
-	Config::CURRENT_ALARM_A };
-static AnalogSensor curSL { SensorType::SecondaryMotorCurrentL, "CUR_SL", &motorsCurrentSense, 2,
-	Config::CURRENT_ALARM_A };
-static AnalogSensor curSR { SensorType::SecondaryMotorCurrentR, "CUR_SR", &motorsCurrentSense, 3,
-	Config::CURRENT_ALARM_A };
+static AnalogSensor curPL { SensorType::PrimaryMotorCurrentL, "CUR_PL", &motorsCurrentSense,
+	MotorCurrentSense::PRIMARY_MOTOR_LEFT, Config::CURRENT_ALARM_A };
+static AnalogSensor curPR { SensorType::PrimaryMotorCurrentR, "CUR_PR", &motorsCurrentSense,
+	MotorCurrentSense::PRIMARY_MOTOR_RIGHT, Config::CURRENT_ALARM_A };
+static AnalogSensor curSL { SensorType::SecondaryMotorCurrentL, "CUR_SL", &motorsCurrentSense,
+	MotorCurrentSense::SECONDARY_MOTOR_LEFT, Config::CURRENT_ALARM_A };
+static AnalogSensor curSR { SensorType::SecondaryMotorCurrentR, "CUR_SR", &motorsCurrentSense,
+	MotorCurrentSense::SECONDARY_MOTOR_RIGHT, Config::CURRENT_ALARM_A };
 
 static ISensor *sensors[Config::MAX_SENSORS] = { &intTempPri, &intTempSec, &intTempPwr, &curPL,
 	&curPR, &curSL, &curSR };

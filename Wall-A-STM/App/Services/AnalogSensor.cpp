@@ -1,4 +1,4 @@
-#include "Drivers/AnalogSensor.h"
+#include "Services/AnalogSensor.h"
 
 AnalogSensor::AnalogSensor(uint8_t id, const char *name, IAnalogSource *src,
                            uint8_t channel, float alarmThreshold)

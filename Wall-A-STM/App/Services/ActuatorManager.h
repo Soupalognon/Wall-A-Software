@@ -1,5 +1,5 @@
-#ifndef APP_TASKS_ACTUATORMANAGER_H
-#define APP_TASKS_ACTUATORMANAGER_H
+#ifndef APP_SERVICES_ACTUATORMANAGER_H
+#define APP_SERVICES_ACTUATORMANAGER_H
 
 #include "Interfaces/IActuatorManager.h"
 #include "Interfaces/IActuator.h"
@@ -21,4 +21,4 @@ private:
 	IBus *_bus;
 };
 
-#endif // APP_TASKS_ACTUATORMANAGER_H
+#endif // APP_SERVICES_ACTUATORMANAGER_H

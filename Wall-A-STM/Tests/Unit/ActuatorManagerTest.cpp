@@ -2,7 +2,7 @@
 #include "Stubs/FreeRTOS.h"
 #include "Mocks/MockBus.h"
 #include "Mocks/MockActuator.h"
-#include "Tasks/ActuatorManager.h"
+#include "Services/ActuatorManager.h"
 
 class ActuatorManagerTest : public ::testing::Test {
 protected:

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "Mocks/MockAnalogSource.h"
-#include "Drivers/AnalogSensor.h"
+#include "Services/AnalogSensor.h"
 
 // ── AnalogSensor — température ───────────────────────────────────────────────
 

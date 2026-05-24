@@ -95,7 +95,7 @@ target_link_libraries(SensorManagerTest PRIVATE GTest::gtest_main)
 # ── ActuatorManagerTest ──────────────────────────────────────────────────
 add_executable(ActuatorManagerTest
     Unit/ActuatorManagerTest.cpp
-    ${APP_DIR}/Tasks/ActuatorManager.cpp
+    ${APP_DIR}/Services/ActuatorManager.cpp
     ${APP_DIR}/Services/BusFormat.cpp
     Stubs/FreeRTOSStub.cpp
 )
@@ -116,7 +116,7 @@ target_link_libraries(MonitoringTest PRIVATE GTest::gtest_main)
 # ── SensorDriversTest ─────────────────────────────────────────────────────
 add_executable(SensorDriversTest
     Unit/SensorDriversTest.cpp
-    ${APP_DIR}/Drivers/AnalogSensor.cpp
+    ${APP_DIR}/Services/AnalogSensor.cpp
 )
 target_include_directories(SensorDriversTest PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(SensorDriversTest PRIVATE GTest::gtest_main)

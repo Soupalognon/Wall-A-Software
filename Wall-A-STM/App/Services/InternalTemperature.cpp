@@ -1,4 +1,4 @@
-#include "Drivers/InternalTemperature.h"
+#include "Services/InternalTemperature.h"
 #include <math.h>
 
 static constexpr uint32_t CHANNELS[] = { ADC_CHANNEL_4, ADC_CHANNEL_5, ADC_CHANNEL_6 };

@@ -1,60 +1,26 @@
-#include <cstdint>
-#include <math.h>
 #include "Drivers/MotorCurrentSense.h"
 
-void MotorCurrentSense::setNotifyThread(TaskHandle_t threadId) {
-	_notifyThreadId = threadId;
-}
+static constexpr uint32_t CHANNELS[] = {
+    ADC_CHANNEL_3, ADC_CHANNEL_4, ADC_CHANNEL_6, ADC_CHANNEL_8 };
 
-void MotorCurrentSense::startConversion() {
-	_conversionIndex = 0;
-	configureAndStart(0);
-}
+MotorCurrentSense::MotorCurrentSense(ADC_HandleTypeDef *hadc)
+    : AdcSequencer(hadc, 0x02, CHANNELS, 4, _rawBuf) {}
 
-void MotorCurrentSense::configureAndStart(uint8_t index) {
-	ADC_ChannelConfTypeDef sConfig = { };
-	sConfig.Channel = CHANNELS[index];
-	sConfig.Rank = 1;
-	sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
-
-	HAL_ADC_ConfigChannel(_hadc, &sConfig);
-	HAL_ADC_Start_IT(_hadc);
-}
-
-// Called from HAL_ADC_ConvCpltCallback — ISR context
-void MotorCurrentSense::onConversionComplete() {
-	_rawValues[_conversionIndex++] = (uint16_t) HAL_ADC_GetValue(_hadc);
-
-	if (_conversionIndex < 2) {
-		configureAndStart(_conversionIndex);
-	} else {
-		_conversionIndex = 0;
-		if (_notifyThreadId != nullptr) {
-			BaseType_t xHPTW = pdFALSE;
-			xTaskNotifyFromISR(_notifyThreadId, ADC_DONE_FLAG, eSetBits, &xHPTW);
-			portYIELD_FROM_ISR(xHPTW);
-		}
-	}
-}
-
-float MotorCurrentSense::getCurrentSense(channel ch) {
-	if (ch == channel::PRIMARY_MOTOR_LEFT || ch == channel::PRIMARY_MOTOR_RIGHT)
-		return voltageToCurrentPrimary(_rawValues[ch]);
-//	if (ch == channel::SECONDARY_MOTOR_LEFT || ch == channel::SECONDARY_MOTOR_RIGHT)
-	else
-		return voltageToCurrentSecondary(_rawValues[ch]);
+float MotorCurrentSense::read(uint8_t ch) {
+    if (ch == channel::PRIMARY_MOTOR_LEFT || ch == channel::PRIMARY_MOTOR_RIGHT)
+        return voltageToCurrentPrimary(rawValues()[ch]);
+    else
+        return voltageToCurrentSecondary(rawValues()[ch]);
 }
 
 float MotorCurrentSense::voltageToCurrentPrimary(uint16_t adcVal) {
-	float voltage = (adcVal / 4096.0f) * 3.3f;
-	voltage *= 1000.0f;	//Convert to mA
-	voltage /= PRI_GAIN_FACTOR;
-	return voltage / PRI_RESISTANCE_REFERENCE;
+    float voltage = (adcVal / 4096.0f) * 3.3f;
+    voltage *= 1000.0f;
+    voltage /= PRI_GAIN_FACTOR;
+    return voltage / PRI_RESISTANCE_REFERENCE;
 }
 
 float MotorCurrentSense::voltageToCurrentSecondary(uint16_t adcVal) {
-	float voltage = (adcVal / 4096.0f) * 3.3f;
-//	voltage *= 1000.0f;
-//	return voltage / SEC_RESISTANCE_REFERENCE;
-	return voltage;
+    float voltage = (adcVal / 4096.0f) * 3.3f;
+    return voltage / SEC_RESISTANCE_REFERENCE;
 }

@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include "Mocks/MockBus.h"
 #include "Mocks/MockSensor.h"
+#include "Mocks/MockAdcGroup.h"
 #include "Stubs/FreeRTOS.h"
 #include "Tasks/SensorManager.h"
 
@@ -120,4 +121,34 @@ TEST_F(SensorManagerTest, SnapshotTimestampUpdated) {
     SensorManager sm{sensors, 0, nullptr, &bus};
     sm.pollOnce();
     EXPECT_EQ(SensorManager::latestSnapshot.timestamp, 1000u);
+}
+
+// ── AdcGroup integration ──────────────────────────────────────────────────────
+
+TEST_F(SensorManagerTest, AdcGroup_TriggerAndWaitCalledOnce) {
+    MockAdcGroup group;
+    IAdcGroup* groups[] = { &group };
+    ISensor* sensors[Config::MAX_SENSORS] = {};
+    SensorManager sm{sensors, 0, nullptr, &bus, groups, 1};
+    sm.pollOnce();
+    EXPECT_EQ(1, group.triggerCallCount);
+    EXPECT_EQ(1, group.waitCallCount);
+}
+
+TEST_F(SensorManagerTest, TwoAdcGroups_BothTriggeredAndWaited) {
+    MockAdcGroup g0, g1;
+    IAdcGroup* groups[] = { &g0, &g1 };
+    ISensor* sensors[Config::MAX_SENSORS] = {};
+    SensorManager sm{sensors, 0, nullptr, &bus, groups, 2};
+    sm.pollOnce();
+    EXPECT_EQ(1, g0.triggerCallCount);
+    EXPECT_EQ(1, g0.waitCallCount);
+    EXPECT_EQ(1, g1.triggerCallCount);
+    EXPECT_EQ(1, g1.waitCallCount);
+}
+
+TEST_F(SensorManagerTest, NullAdcGroups_NoCrash) {
+    ISensor* sensors[Config::MAX_SENSORS] = {};
+    SensorManager sm{sensors, 0, nullptr, &bus};
+    EXPECT_NO_THROW(sm.pollOnce());
 }

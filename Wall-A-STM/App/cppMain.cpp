@@ -15,15 +15,8 @@
 #include "Drivers/Encoder.h"
 #include "Drivers/InternalTemperature.h"
 #include "Drivers/MotorCurrentSense.h"
+#include "Drivers/AnalogSensor.h"
 
-#include "Drivers/Stubs/ProximitySensor.h"
-#include "Drivers/Stubs/TemperatureSensor.h"
-#include "Drivers/Stubs/CurrentSensor.h"
-#include "Drivers/Stubs/Pump.h"
-#include "Drivers/Stubs/Servo.h"
-#include "Drivers/Stubs/LinearTransducer.h"
-
-#include "Interfaces/IActuatorHAL.h"
 #include "Interfaces/IEncoderHAL.h"
 #include "Interfaces/IMotorHAL.h"
 
@@ -43,23 +36,6 @@ extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern ADC_HandleTypeDef hadc3;
 
-// Stub HAL wrappers - replace with concrete drivers when hardware is wired
-namespace {
-struct StubSensorHAL: public ISensorHAL {
-	float read() override
-	{
-		return 0.0f;
-	}
-};
-
-struct StubActuatorHAL: public IActuatorHAL {
-	void set(float) override
-	{
-	}
-};
-
-} // namespace
-
 static UartChannel uartCh { &huart1 };
 static UsbCdcChannel usbCh { &hUsbDeviceFS };
 
@@ -67,29 +43,40 @@ static Encoder encL { &htim4 }, encR { &htim8 };
 static Odometry odomHAL { &encL, &encR };
 
 static InternalTemperature internalTemperatures { &hadc3 };
-static MotorCurrentSense motorCurrentSense { &hadc1 };
+static MotorCurrentSense motorsCurrentSense { &hadc1 };
 
 static Drv8262 drv { };
 
 static QueueHandle_t cmdMailbox = xQueueCreate(1, sizeof(MoveCmd));
 static QueueHandle_t setpointMailbox = xQueueCreate(1, sizeof(Setpoint));
 
-static StubSensorHAL stubProxHAL, stubTempHAL, stubCurrentHAL;
-static ProximitySensor proxSensor { 1, &stubProxHAL };
-static TemperatureSensor tempSensor { 2, &stubTempHAL };
-static CurrentSensor currentSensor { 3, &stubCurrentHAL };
+// ── Sensors InternalTemperature (hadc3 — 3 canaux) ───────────────────────────
+static AnalogSensor intTempPri { SensorType::PrimaryMotorTemp, "TEMP_PRI", &internalTemperatures, 0,
+	Config::TEMP_ALARM_C };
+static AnalogSensor intTempSec { SensorType::SecondaryMotorTemp, "TEMP_SEC", &internalTemperatures,
+	1, Config::TEMP_ALARM_C };
+static AnalogSensor intTempPwr { SensorType::PowerSupplyTemp, "TEMP_PWR", &internalTemperatures, 2,
+	Config::TEMP_ALARM_C };
 
-// static ISensor *sensors[Config::MAX_SENSORS] = { &proxSensor, &tempSensor, &currentSensor };
-// static uint8_t sensorCount = 3;
+// ── Sensors MotorCurrentSense (hadc1 — 4 canaux) ─────────────────────────────
+static AnalogSensor curPL { SensorType::PrimaryMotorCurrentL, "CUR_PL", &motorsCurrentSense, 0,
+	Config::CURRENT_ALARM_A };
+static AnalogSensor curPR { SensorType::PrimaryMotorCurrentR, "CUR_PR", &motorsCurrentSense, 1,
+	Config::CURRENT_ALARM_A };
+static AnalogSensor curSL { SensorType::SecondaryMotorCurrentL, "CUR_SL", &motorsCurrentSense, 2,
+	Config::CURRENT_ALARM_A };
+static AnalogSensor curSR { SensorType::SecondaryMotorCurrentR, "CUR_SR", &motorsCurrentSense, 3,
+	Config::CURRENT_ALARM_A };
 
-static StubActuatorHAL stubPumpHAL, stubServoHAL, stubTransducerHAL;
-static Pump pump { 1, &stubPumpHAL };
-static Servo servo { 2, &stubServoHAL };
-static LinearTransducer linearTransducer { 3, &stubTransducerHAL };
+static ISensor *sensors[Config::MAX_SENSORS] = { &intTempPri, &intTempSec, &intTempPwr, &curPL,
+	&curPR, &curSL, &curSR };
+static uint8_t sensorCount = 7;
 
-static IActuator *actuators[Config::MAX_ACTUATORS] = { &pump, &servo, &linearTransducer };
-static uint8_t actuatorCount = 3;
-static ActuatorManager actuatorMgr { actuators, actuatorCount, nullptr };
+// ── ADC groups (déclenchés en parallèle par SensorManager) ───────────────────
+static IAdcGroup *adcGroups[] = { &internalTemperatures, &motorsCurrentSense };
+
+// ── Actuators ─────────────────────────────────────────────────────────────────
+static ActuatorManager actuatorMgr { nullptr, 0, nullptr };
 
 static ExternalComm extComm { &uartCh, &usbCh, nullptr, &actuatorMgr, cmdMailbox };
 static OdoControl odoCtrl { &odomHAL, &drv, &extComm, setpointMailbox };
@@ -125,14 +112,14 @@ extern "C" void cppMain(void) {
 	createTask(MotionPlanner::task, "MoPlan", Config::STACK_MOTION_PLANNER, &motionPlanner,
 		Config::PRIO_MOTION_PLANNER, nullptr);
 
-	static Monitoring monitoring { &extComm, &internalTemperatures, &motorCurrentSense,
-		MotionPlanner::handle };
+	static Monitoring monitoring { &extComm };
 	createTask(Monitoring::task, "Monitor", Config::STACK_MONITORING, &monitoring,
 		Config::PRIO_MONITORING, nullptr);
 
-	// static SensorManager sensorManager { sensors, sensorCount, MotionPlanner::handle, &extComm };
-	//	createTask(SensorManager::task, "SensorMgr", Config::STACK_SENSOR_MANAGER, &sensorManager,
-	//		Config::PRIO_SENSOR_MANAGER, nullptr);
+	static SensorManager sensorManager { sensors, sensorCount, MotionPlanner::handle, &extComm,
+		adcGroups, 2 };
+	createTask(SensorManager::task, "SensorMgr", Config::STACK_SENSOR_MANAGER, &sensorManager,
+		Config::PRIO_SENSOR_MANAGER, nullptr);
 
 	xTaskCreate(blinkTaskFn, "Blink", configMINIMAL_STACK_SIZE, nullptr, 1, nullptr);
 
@@ -141,14 +128,11 @@ extern "C" void cppMain(void) {
 	enable(true);
 
 	vTaskDelete(nullptr);
-//	for (;;) {
-//		vTaskDelay(pdMS_TO_TICKS(1000));
-//	}
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 	if (hadc == internalTemperatures.getInstance())
 		internalTemperatures.onConversionComplete();
-	else if (hadc == motorCurrentSense.getInstance())
-		motorCurrentSense.onConversionComplete();
+	else if (hadc == motorsCurrentSense.getInstance())
+		motorsCurrentSense.onConversionComplete();
 }

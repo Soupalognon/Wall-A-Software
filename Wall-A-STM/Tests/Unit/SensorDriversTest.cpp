@@ -1,101 +1,104 @@
 #include <gtest/gtest.h>
-#include "Mocks/MockSensorHAL.h"
-#include "Drivers/ProximitySensor.h"
-#include "Drivers/TemperatureSensor.h"
-#include "Drivers/CurrentSensor.h"
+#include "Mocks/MockAnalogSource.h"
+#include "Drivers/AnalogSensor.h"
 
-// ── ProximitySensor ──────────────────────────────────────────────────────────
+// ── AnalogSensor — température ───────────────────────────────────────────────
 
-TEST(ProximitySensorTest, ProxRead_DelegatesToHAL) {
-    MockSensorHAL hal;
-    hal.returnValue = 0.35f;
-    ProximitySensor sensor{1, &hal};
-    EXPECT_FLOAT_EQ(0.35f, sensor.read());
+TEST(AnalogSensorTest, Read_ReturnsPrimaryChannel) {
+    MockAnalogSource src;
+    src.values[0] = 45.0f;
+    AnalogSensor sensor{4, "TEMP_PRI", &src, 0, 60.0f};
+    EXPECT_FLOAT_EQ(45.0f, sensor.read());
 }
 
-TEST(ProximitySensorTest, ProxAlarm_WhenTooClose) {
-    MockSensorHAL hal;
-    hal.returnValue = 0.10f;
-    ProximitySensor sensor{1, &hal};
+TEST(AnalogSensorTest, Read_ThreeChannelsAreIndependent) {
+    MockAnalogSource src;
+    src.values[0] = 10.0f;
+    src.values[1] = 20.0f;
+    src.values[2] = 30.0f;
+    AnalogSensor s0{4, "TEMP_PRI", &src, 0, 60.0f};
+    AnalogSensor s1{5, "TEMP_SEC", &src, 1, 60.0f};
+    AnalogSensor s2{6, "TEMP_PWR", &src, 2, 60.0f};
+    EXPECT_FLOAT_EQ(10.0f, s0.read());
+    EXPECT_FLOAT_EQ(20.0f, s1.read());
+    EXPECT_FLOAT_EQ(30.0f, s2.read());
+}
+
+TEST(AnalogSensorTest, Alarm_WhenOverThreshold) {
+    MockAnalogSource src;
+    src.values[1] = 70.0f;
+    AnalogSensor sensor{5, "TEMP_SEC", &src, 1, 60.0f};
     sensor.read();
     EXPECT_TRUE(sensor.isAlarm());
 }
 
-TEST(ProximitySensorTest, ProxNoAlarm_WhenFar) {
-    MockSensorHAL hal;
-    hal.returnValue = 0.30f;
-    ProximitySensor sensor{1, &hal};
+TEST(AnalogSensorTest, NoAlarm_WhenUnderThreshold) {
+    MockAnalogSource src;
+    src.values[2] = 40.0f;
+    AnalogSensor sensor{6, "TEMP_PWR", &src, 2, 60.0f};
     sensor.read();
     EXPECT_FALSE(sensor.isAlarm());
 }
 
-TEST(ProximitySensorTest, ProxId_IsCorrect) {
-    MockSensorHAL hal;
-    ProximitySensor sensor{3, &hal};
-    EXPECT_EQ(3u, sensor.id());
-    EXPECT_STREQ("PROXIMITY", sensor.name());
+TEST(AnalogSensorTest, IdAndName_AreCorrect) {
+    MockAnalogSource src;
+    AnalogSensor s0{4, "TEMP_PRI", &src, 0, 60.0f};
+    AnalogSensor s1{5, "TEMP_SEC", &src, 1, 60.0f};
+    AnalogSensor s2{6, "TEMP_PWR", &src, 2, 60.0f};
+    EXPECT_EQ(4u, s0.id());  EXPECT_STREQ("TEMP_PRI", s0.name());
+    EXPECT_EQ(5u, s1.id());  EXPECT_STREQ("TEMP_SEC", s1.name());
+    EXPECT_EQ(6u, s2.id());  EXPECT_STREQ("TEMP_PWR", s2.name());
 }
 
-// ── TemperatureSensor ────────────────────────────────────────────────────────
+// ── AnalogSensor — courant moteur ────────────────────────────────────────────
 
-TEST(TemperatureSensorTest, TempRead_DelegatesToHAL) {
-    MockSensorHAL hal;
-    hal.returnValue = 25.0f;
-    TemperatureSensor sensor{2, &hal};
-    EXPECT_FLOAT_EQ(25.0f, sensor.read());
+TEST(AnalogSensorTest, Read_ReturnsPrimaryLeftChannel) {
+    MockAnalogSource src;
+    src.values[0] = 1.2f;
+    AnalogSensor sensor{7, "CUR_PL", &src, 0, 2.0f};
+    EXPECT_FLOAT_EQ(1.2f, sensor.read());
 }
 
-TEST(TemperatureSensorTest, TempAlarm_WhenOverThreshold) {
-    MockSensorHAL hal;
-    hal.returnValue = 75.0f;
-    TemperatureSensor sensor{2, &hal};
+TEST(AnalogSensorTest, Read_FourChannelsAreIndependent) {
+    MockAnalogSource src;
+    src.values[0] = 0.1f;
+    src.values[1] = 0.2f;
+    src.values[2] = 0.3f;
+    src.values[3] = 0.4f;
+    AnalogSensor s0{7,  "CUR_PL", &src, 0, 2.0f};
+    AnalogSensor s1{8,  "CUR_PR", &src, 1, 2.0f};
+    AnalogSensor s2{9,  "CUR_SL", &src, 2, 2.0f};
+    AnalogSensor s3{10, "CUR_SR", &src, 3, 2.0f};
+    EXPECT_FLOAT_EQ(0.1f, s0.read());
+    EXPECT_FLOAT_EQ(0.2f, s1.read());
+    EXPECT_FLOAT_EQ(0.3f, s2.read());
+    EXPECT_FLOAT_EQ(0.4f, s3.read());
+}
+
+TEST(AnalogSensorTest, Alarm_WhenOverCurrentThreshold) {
+    MockAnalogSource src;
+    src.values[0] = 3.0f;
+    AnalogSensor sensor{7, "CUR_PL", &src, 0, 2.0f};
     sensor.read();
     EXPECT_TRUE(sensor.isAlarm());
 }
 
-TEST(TemperatureSensorTest, TempNoAlarm_WhenCool) {
-    MockSensorHAL hal;
-    hal.returnValue = 40.0f;
-    TemperatureSensor sensor{2, &hal};
+TEST(AnalogSensorTest, NoAlarm_WhenUnderCurrentThreshold) {
+    MockAnalogSource src;
+    src.values[1] = 1.0f;
+    AnalogSensor sensor{8, "CUR_PR", &src, 1, 2.0f};
     sensor.read();
     EXPECT_FALSE(sensor.isAlarm());
 }
 
-TEST(TemperatureSensorTest, TempId_IsCorrect) {
-    MockSensorHAL hal;
-    TemperatureSensor sensor{2, &hal};
-    EXPECT_EQ(2u, sensor.id());
-    EXPECT_STREQ("TEMPERATURE", sensor.name());
-}
-
-// ── CurrentSensor ────────────────────────────────────────────────────────────
-
-TEST(CurrentSensorTest, CurrRead_DelegatesToHAL) {
-    MockSensorHAL hal;
-    hal.returnValue = 1.5f;
-    CurrentSensor sensor{3, &hal};
-    EXPECT_FLOAT_EQ(1.5f, sensor.read());
-}
-
-TEST(CurrentSensorTest, CurrAlarm_WhenOverThreshold) {
-    MockSensorHAL hal;
-    hal.returnValue = 3.0f;
-    CurrentSensor sensor{3, &hal};
-    sensor.read();
-    EXPECT_TRUE(sensor.isAlarm());
-}
-
-TEST(CurrentSensorTest, CurrNoAlarm_WhenNormal) {
-    MockSensorHAL hal;
-    hal.returnValue = 1.0f;
-    CurrentSensor sensor{3, &hal};
-    sensor.read();
-    EXPECT_FALSE(sensor.isAlarm());
-}
-
-TEST(CurrentSensorTest, CurrId_IsCorrect) {
-    MockSensorHAL hal;
-    CurrentSensor sensor{5, &hal};
-    EXPECT_EQ(5u, sensor.id());
-    EXPECT_STREQ("CURRENT", sensor.name());
+TEST(AnalogSensorTest, IdAndName_AreCorrectForCurrentSensors) {
+    MockAnalogSource src;
+    AnalogSensor s0{7,  "CUR_PL", &src, 0, 2.0f};
+    AnalogSensor s1{8,  "CUR_PR", &src, 1, 2.0f};
+    AnalogSensor s2{9,  "CUR_SL", &src, 2, 2.0f};
+    AnalogSensor s3{10, "CUR_SR", &src, 3, 2.0f};
+    EXPECT_EQ(7u,  s0.id());  EXPECT_STREQ("CUR_PL", s0.name());
+    EXPECT_EQ(8u,  s1.id());  EXPECT_STREQ("CUR_PR", s1.name());
+    EXPECT_EQ(9u,  s2.id());  EXPECT_STREQ("CUR_SL", s2.name());
+    EXPECT_EQ(10u, s3.id());  EXPECT_STREQ("CUR_SR", s3.name());
 }

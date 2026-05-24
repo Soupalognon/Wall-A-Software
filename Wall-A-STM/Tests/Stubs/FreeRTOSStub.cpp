@@ -109,6 +109,14 @@ static uint32_t g_notifyBits = 0;
 
 void resetTestNotifications() { g_notifyBits = 0; }
 
+TaskHandle_t xTaskGetCurrentTaskHandle(void) { return nullptr; }
+
+BaseType_t xTaskNotifyFromISR(TaskHandle_t xTask, uint32_t ulValue, eNotifyAction eAction,
+                               BaseType_t *pxHigherPriorityTaskWoken) {
+    if (pxHigherPriorityTaskWoken) *pxHigherPriorityTaskWoken = pdFALSE;
+    return xTaskNotify(xTask, ulValue, eAction);
+}
+
 BaseType_t xTaskNotify(TaskHandle_t, uint32_t ulValue, eNotifyAction eAction) {
     if (eAction == eSetBits) g_notifyBits |= ulValue;
     return pdTRUE;

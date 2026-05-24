@@ -20,6 +20,9 @@ BaseType_t   xTaskCreate(TaskFunction_t pvTaskCode, const char* pcName,
 BaseType_t   xTaskNotify(TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction);
 BaseType_t   xTaskNotifyWait(uint32_t ulBitsToClearOnEntry, uint32_t ulBitsToClearOnExit,
                              uint32_t* pulNotificationValue, TickType_t xTicksToWait);
+BaseType_t   xTaskNotifyFromISR(TaskHandle_t xTaskToNotify, uint32_t ulValue,
+                                eNotifyAction eAction, BaseType_t* pxHigherPriorityTaskWoken);
+TaskHandle_t xTaskGetCurrentTaskHandle(void);
 
 #ifdef __cplusplus
 }
@@ -27,5 +30,7 @@ BaseType_t   xTaskNotifyWait(uint32_t ulBitsToClearOnEntry, uint32_t ulBitsToCle
 
 // Test utility — reset accumulated xTaskNotify bits between tests
 void resetTestNotifications();
+
+#define portYIELD_FROM_ISR(x) ((void)(x))
 
 #endif // TESTS_STUBS_TASK_H

@@ -85,7 +85,7 @@ static constexpr uint32_t CMD_WATCHDOG_TIMEOUT_MS = 1000;
 // FreeRTOS stack sizes (32-bit words on ARM Cortex-M)
 static constexpr uint16_t STACK_ODO_CONTROL = 512;
 static constexpr uint16_t STACK_MOTION_PLANNER = 256;
-static constexpr uint16_t STACK_SENSOR_MANAGER = 256;
+static constexpr uint16_t STACK_SENSOR_MANAGER = 512;
 static constexpr uint16_t STACK_MONITORING = 1024;
 static constexpr uint16_t STACK_EXTCOMM_RX = 512;
 static constexpr uint16_t STACK_EXTCOMM_TX = 256;

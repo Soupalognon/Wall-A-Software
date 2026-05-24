@@ -116,22 +116,10 @@ target_link_libraries(MonitoringTest PRIVATE GTest::gtest_main)
 # ── SensorDriversTest ─────────────────────────────────────────────────────
 add_executable(SensorDriversTest
     Unit/SensorDriversTest.cpp
-    ${APP_DIR}/Drivers/Stubs/ProximitySensor.cpp
-    ${APP_DIR}/Drivers/Stubs/TemperatureSensor.cpp
-    ${APP_DIR}/Drivers/Stubs/CurrentSensor.cpp
+    ${APP_DIR}/Drivers/AnalogSensor.cpp
 )
 target_include_directories(SensorDriversTest PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(SensorDriversTest PRIVATE GTest::gtest_main)
-
-# ── ActuatorDriversTest ───────────────────────────────────────────────────
-add_executable(ActuatorDriversTest
-    Unit/ActuatorDriversTest.cpp
-    ${APP_DIR}/Drivers/Stubs/Pump.cpp
-    ${APP_DIR}/Drivers/Stubs/Servo.cpp
-    ${APP_DIR}/Drivers/Stubs/LinearTransducer.cpp
-)
-target_include_directories(ActuatorDriversTest PRIVATE ${COMMON_INCLUDES})
-target_link_libraries(ActuatorDriversTest PRIVATE GTest::gtest_main)
 
 # ── PidTest ───────────────────────────────────────────────────────────────
 add_executable(PidTest
@@ -152,5 +140,4 @@ gtest_discover_tests(SensorManagerTest)
 gtest_discover_tests(ActuatorManagerTest)
 gtest_discover_tests(MonitoringTest)
 gtest_discover_tests(SensorDriversTest)
-gtest_discover_tests(ActuatorDriversTest)
 gtest_discover_tests(PidTest)

@@ -2,11 +2,8 @@
 #define APP_TASKS_MONITORING_H
 
 #include "Tasks/OdoControl.h"
-#include "Tasks/SensorManager.h"
 #include "Tasks/ExternalComm.h"
 #include "Interfaces/IBus.h"
-#include "Drivers/InternalTemperature.h"
-#include "Drivers/MotorCurrentSense.h"
 #include "Services/BusFormat.h"
 #include "Config.h"
 #include <FreeRTOS.h>
@@ -15,19 +12,12 @@
 
 class Monitoring {
 public:
-	Monitoring(IBus *bus, InternalTemperature *internalTemp, MotorCurrentSense *motorCurrentSense,
-		TaskHandle_t motionPlannerHandle);
+	explicit Monitoring(IBus *bus);
 	static void task(void *param);
 	void checkOnce();
 
-	void getMotorsCurrentConsumptions();
-
 private:
 	IBus *_bus;
-	InternalTemperature *_internalTemperatures;
-	MotorCurrentSense *_motorCurrentSense;
-	TaskHandle_t _motionPlannerHandle;
-
 };
 
 #endif // APP_TASKS_MONITORING_H

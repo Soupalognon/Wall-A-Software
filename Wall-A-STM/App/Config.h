@@ -73,7 +73,7 @@ static constexpr uint8_t TELEM_DIVIDER = 10;
 // Sensor alarm thresholds
 static constexpr float PROXIMITY_ALARM_M = 0.20f;
 static constexpr float TEMP_ALARM_C = 60.0f;
-static constexpr float CURRENT_ALARM_A = 2.0f;
+static constexpr float CURRENT_ALARM_MA = 4000.0f;
 
 // Monitoring stale threshold (ms)
 static constexpr uint32_t MONITORING_STALE_MS = 500;

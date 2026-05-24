@@ -73,9 +73,21 @@ const char* BusFormat::altStale(const char *module) {
 	return buf;
 }
 
+const char* BusFormat::altSensorAlarm(const char *sensorName, float value) {
+	static char buf[48];
+	snprintf(buf, sizeof(buf), "ALT SENSOR %s:%.1f\r\n", sensorName, value);
+	return buf;
+}
+
 const char* BusFormat::hltSensors(uint8_t count, uint32_t alarmMask) {
 	static char buf[48];
-	snprintf(buf, sizeof(buf), "HLT SENSORS N=%u ALM=0x%08lX\r\n", static_cast<unsigned>(count),
+	snprintf(buf, sizeof(buf), "HLT SENSORS ALM:0x%08lX\r\n",
 		static_cast<unsigned long>(alarmMask));
+	return buf;
+}
+
+const char* BusFormat::hltSensorValue(const char *sensorName, float value) {
+	static char buf[48];
+	snprintf(buf, sizeof(buf), "HLT SENSOR %s:%.2f\r\n", sensorName, value);
 	return buf;
 }

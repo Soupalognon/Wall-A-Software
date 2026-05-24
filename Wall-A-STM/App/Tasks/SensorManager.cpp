@@ -4,11 +4,14 @@
 #include "stm32f4xx_hal.h"
 
 SensorManager::SensorSnapshot SensorManager::latestSnapshot { };
+const char* SensorManager::sensorNames[Config::MAX_SENSORS] { };
 
 SensorManager::SensorManager(ISensor **sensors, uint8_t sensorCount,
 	TaskHandle_t motionPlannerHandle, IBus *bus, IAdcGroup **adcGroups, uint8_t adcGroupCount) :
 	_sensors(sensors), _sensorCount(sensorCount), _motionPlannerHandle(motionPlannerHandle), _bus(
 		bus), _adcGroups(adcGroups), _adcGroupCount(adcGroupCount) {
+	for (uint8_t i = 0; i < sensorCount && i < Config::MAX_SENSORS; ++i)
+		sensorNames[i] = (sensors[i] != nullptr) ? sensors[i]->name() : "";
 }
 
 void SensorManager::task(void *param) {
@@ -31,8 +34,6 @@ void SensorManager::pollOnce() {
 	for (uint8_t i = 0; i < _adcGroupCount; ++i)
 		_adcGroups[i]->wait();
 
-	uint32_t alarmMask = 0;
-
 	for (uint8_t i = 0; i < _sensorCount && i < Config::MAX_SENSORS; ++i) {
 		if (_sensors[i] == nullptr)
 			continue;
@@ -41,10 +42,9 @@ void SensorManager::pollOnce() {
 		bool alarm = _sensors[i]->isAlarm();
 
 		latestSnapshot.values[i] = value;
-		latestSnapshot.alarms[i] = alarm;
 
 		if (alarm) {
-			alarmMask |= (1u << i);
+			latestSnapshot.alarmMask |= (1u << i);
 		}
 	}
 
@@ -54,6 +54,4 @@ void SensorManager::pollOnce() {
 // if (alarmMask != 0) {
 // 	xTaskNotify(_motionPlannerHandle, alarmMask, eSetBits);
 // }
-
-// _bus->publish(Topic::HEALTH, BusFormat::hltSensors(_sensorCount, alarmMask));
 }

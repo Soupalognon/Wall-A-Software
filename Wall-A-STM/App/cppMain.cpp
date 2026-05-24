@@ -59,14 +59,14 @@ static AnalogSensor intTempPwr { SensorType::PowerSupplyTemp, "TEMP_PWR", &inter
 	InternalTemperature::POWER_SUPPLIES, Config::TEMP_ALARM_C };
 
 // ── Sensors MotorCurrentSense (hadc1 — 4 canaux) ─────────────────────────────
-static AnalogSensor curPL { SensorType::PrimaryMotorCurrentL, "CUR_PL", &motorsCurrentSense,
-	MotorCurrentSense::PRIMARY_MOTOR_LEFT, Config::CURRENT_ALARM_A };
-static AnalogSensor curPR { SensorType::PrimaryMotorCurrentR, "CUR_PR", &motorsCurrentSense,
-	MotorCurrentSense::PRIMARY_MOTOR_RIGHT, Config::CURRENT_ALARM_A };
-static AnalogSensor curSL { SensorType::SecondaryMotorCurrentL, "CUR_SL", &motorsCurrentSense,
-	MotorCurrentSense::SECONDARY_MOTOR_LEFT, Config::CURRENT_ALARM_A };
-static AnalogSensor curSR { SensorType::SecondaryMotorCurrentR, "CUR_SR", &motorsCurrentSense,
-	MotorCurrentSense::SECONDARY_MOTOR_RIGHT, Config::CURRENT_ALARM_A };
+static AnalogSensor curPL { SensorType::PrimaryMotorCurrentL, "CUR_PRI_L", &motorsCurrentSense,
+	MotorCurrentSense::PRIMARY_MOTOR_LEFT, Config::CURRENT_ALARM_MA };
+static AnalogSensor curPR { SensorType::PrimaryMotorCurrentR, "CUR_PRI_R", &motorsCurrentSense,
+	MotorCurrentSense::PRIMARY_MOTOR_RIGHT, Config::CURRENT_ALARM_MA };
+static AnalogSensor curSL { SensorType::SecondaryMotorCurrentL, "CUR_SEC_L", &motorsCurrentSense,
+	MotorCurrentSense::SECONDARY_MOTOR_LEFT, Config::CURRENT_ALARM_MA };
+static AnalogSensor curSR { SensorType::SecondaryMotorCurrentR, "CUR_SEC_R", &motorsCurrentSense,
+	MotorCurrentSense::SECONDARY_MOTOR_RIGHT, Config::CURRENT_ALARM_MA };
 
 static ISensor *sensors[Config::MAX_SENSORS] = { &intTempPri, &intTempSec, &intTempPwr, &curPL,
 	&curPR, &curSL, &curSR };

@@ -23,18 +23,12 @@ class SensorManager {
 public:
 	struct SensorSnapshot {
 		float values[Config::MAX_SENSORS];
-		bool alarms[Config::MAX_SENSORS];
+		uint32_t alarmMask;
 		uint8_t count;
 		uint32_t timestamp;
-
-		float operator[](uint8_t idx) const {
-			return values[idx];
-		}
-		bool alarm(uint8_t idx) const {
-			return alarms[idx];
-		}
 	};
 	static SensorSnapshot latestSnapshot;
+	static const char* sensorNames[Config::MAX_SENSORS];
 
 	SensorManager(ISensor **sensors, uint8_t sensorCount, TaskHandle_t motionPlannerHandle,
 		IBus *bus, IAdcGroup **adcGroups = nullptr, uint8_t adcGroupCount = 0);

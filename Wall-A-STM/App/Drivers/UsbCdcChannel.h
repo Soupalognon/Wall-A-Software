@@ -1,9 +1,9 @@
 #ifndef APP_DRIVERS_USBCDCCHANNEL_H
 #define APP_DRIVERS_USBCDCCHANNEL_H
 
-#include "Interfaces/ICommChannel.h"
 #include "usbd_cdc_if.h"
 #include <FreeRTOS.h>
+#include <Interfaces/ICom.h>
 #include <queue.h>
 #include <cstddef>
 

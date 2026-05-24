@@ -21,34 +21,24 @@ static constexpr ComQueuePolicy UART_POLICY = { true, false, false, false };
 static constexpr ComQueuePolicy USB_POLICY = { true, false, false, false };
 static constexpr ComQueuePolicy ETH_POLICY  = { false,  false,  false, false };
 #else
-static constexpr ComQueuePolicy UART_POLICY = { true, false, false, false };
+static constexpr ComQueuePolicy UART_POLICY = { true, false, true, false };
 static constexpr ComQueuePolicy USB_POLICY = { false, true, true, true };
 static constexpr ComQueuePolicy ETH_POLICY = { false, false, false, false };
 #endif
 
 // Task frequency
 static constexpr uint32_t ODO_FREQ_HZ = 200;
-static constexpr uint32_t MONITORING_FREQ_HZ = 10;
 static constexpr uint32_t SENSOR_FREQ_HZ = 10;
+static constexpr uint32_t MONITORING_FREQ_HZ = 10;
 
 // Fixed array bounds (NFR-02 - no dynamic allocation)
 static constexpr uint8_t MAX_SENSORS = 15; //WARN: If you touch this value you must modify "Wall-A-STM\App\Tasks\MotionPlanner.h" --> AlarmBits --> SENSOR table
 static constexpr uint8_t MAX_ACTUATORS = 10;
 
-// PID defaults — speed (linear velocity)
-static constexpr float PID_KP_DEFAULT = 0.3f;
-static constexpr float PID_KI_DEFAULT = 0.1f;
-static constexpr float PID_KD_DEFAULT = 0.0f;
-
-// PID defaults — angle (angular velocity)
-static constexpr float PID_KP_ANGLE_DEFAULT = 0.6f;
-static constexpr float PID_KI_ANGLE_DEFAULT = 0.1f;
-static constexpr float PID_KD_ANGLE_DEFAULT = 0.01f;
-
 // Physical odometry constants (adapt to real robot geometry)
 static constexpr float WHEEL_RADIUS_M = 0.0381f;
 static constexpr float WHEEL_BASE_M = 0.200f;
-static constexpr int32_t TICKS_PER_REV = 256 * 4; //*4 because software config is increasing resolution
+static constexpr int32_t TICKS_PER_REV = 256 * 4; //*4 because software config is increasing resolution (CubeMx config)
 static constexpr int32_t MOTO_REDUCTION_RATIO = 14;
 static constexpr float D_PER_TICK = (2.0f * 3.14159265f * WHEEL_RADIUS_M)
 	/ (static_cast<float>(TICKS_PER_REV) * static_cast<float>(MOTO_REDUCTION_RATIO));
@@ -69,6 +59,16 @@ static constexpr int8_t ENCODER_R_SIGN = -1;
 static constexpr int8_t MOTOR_L_SIGN = +1;
 static constexpr int8_t MOTOR_R_SIGN = +1;
 static constexpr uint8_t TELEM_DIVIDER = 10;
+
+// PID defaults — speed (linear velocity)
+static constexpr float PID_KP_DEFAULT = 0.3f;
+static constexpr float PID_KI_DEFAULT = 0.1f;
+static constexpr float PID_KD_DEFAULT = 0.0f;
+
+// PID defaults — angle (angular velocity)
+static constexpr float PID_KP_ANGLE_DEFAULT = 0.6f;
+static constexpr float PID_KI_ANGLE_DEFAULT = 0.1f;
+static constexpr float PID_KD_ANGLE_DEFAULT = 0.01f;
 
 // Sensor alarm thresholds
 static constexpr float PROXIMITY_ALARM_M = 0.20f;

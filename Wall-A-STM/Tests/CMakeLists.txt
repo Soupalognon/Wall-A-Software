@@ -117,6 +117,7 @@ target_link_libraries(MonitoringTest PRIVATE GTest::gtest_main)
 add_executable(SensorDriversTest
     Unit/SensorDriversTest.cpp
     ${APP_DIR}/Services/AnalogSensor.cpp
+    Stubs/FreeRTOSStub.cpp
 )
 target_include_directories(SensorDriversTest PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(SensorDriversTest PRIVATE GTest::gtest_main)

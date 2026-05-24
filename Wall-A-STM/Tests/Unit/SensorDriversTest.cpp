@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "Stubs/HalStub.h"
 #include "Mocks/MockAnalogSource.h"
 #include "Services/AnalogSensor.h"
 
@@ -101,4 +102,77 @@ TEST(AnalogSensorTest, IdAndName_AreCorrectForCurrentSensors) {
     EXPECT_EQ(8u,  s1.id());  EXPECT_STREQ("CUR_PR", s1.name());
     EXPECT_EQ(9u,  s2.id());  EXPECT_STREQ("CUR_SL", s2.name());
     EXPECT_EQ(10u, s3.id());  EXPECT_STREQ("CUR_SR", s3.name());
+}
+
+// ── AnalogSensor — alarme PERIOD ─────────────────────────────────────────────
+
+TEST(AnalogSensorTest, Period_NoAlarm_BeforeDurationElapsed) {
+    // Valeur au-dessus du seuil mais pas encore 1000ms écoulées
+    MockAnalogSource src;
+    src.values[0] = 5.0f;
+    AnalogSensor s{1, "CUR", &src, 0, 2.0f, 1000};
+    setMockTick(0);   s.read();
+    setMockTick(999);
+    EXPECT_FALSE(s.isAlarm());
+}
+
+TEST(AnalogSensorTest, Period_Alarm_AfterDurationElapsed) {
+    // Valeur au-dessus du seuil pendant exactement 1000ms
+    MockAnalogSource src;
+    src.values[0] = 5.0f;
+    AnalogSensor s{1, "CUR", &src, 0, 2.0f, 1000};
+    setMockTick(0);    s.read();  // rising edge à t=0
+    setMockTick(500);  s.read();  // toujours au-dessus
+    setMockTick(1000);
+    EXPECT_TRUE(s.isAlarm());
+}
+
+TEST(AnalogSensorTest, Period_NoAlarm_AfterValueDrops) {
+    // La valeur repasse en dessous → timer reset, plus d'alarme
+    MockAnalogSource src;
+    src.values[0] = 5.0f;
+    AnalogSensor s{1, "CUR", &src, 0, 2.0f, 1000};
+    setMockTick(0);    s.read();   // rising edge
+    setMockTick(500);
+    src.values[0] = 1.0f;
+    s.read();                      // repasse en dessous → reset
+    setMockTick(1500);
+    EXPECT_FALSE(s.isAlarm());
+}
+
+TEST(AnalogSensorTest, Period_RisingEdge_ResetsOnDrop) {
+    // Remonte après être passé en dessous → nouveau timer
+    MockAnalogSource src;
+    src.values[0] = 5.0f;
+    AnalogSensor s{1, "CUR", &src, 0, 2.0f, 1000};
+    setMockTick(0);    s.read();   // 1er rising edge
+    setMockTick(100);
+    src.values[0] = 1.0f;
+    s.read();                      // descend
+    setMockTick(200);
+    src.values[0] = 5.0f;
+    s.read();                      // 2ème rising edge à t=200
+    setMockTick(1100);             // 900ms après le 2ème edge → pas encore 1000ms
+    EXPECT_FALSE(s.isAlarm());
+    setMockTick(1200);             // 1000ms après le 2ème edge
+    EXPECT_TRUE(s.isAlarm());
+}
+
+TEST(AnalogSensorTest, Period_IndependentOfRefreshRate) {
+    // Même résultat avec 1 lecture ou 10 lectures pendant la fenêtre
+    MockAnalogSource src;
+    src.values[0] = 5.0f;
+
+    AnalogSensor slow{1, "CUR", &src, 0, 2.0f, 2000};
+    setMockTick(0);    slow.read();   // 1 seule lecture à t=0
+    setMockTick(2000);
+    EXPECT_TRUE(slow.isAlarm());
+
+    AnalogSensor fast{1, "CUR", &src, 0, 2.0f, 2000};
+    setMockTick(0);
+    for (uint32_t t = 0; t <= 2000; t += 100) {
+        setMockTick(t);
+        fast.read();                  // 21 lectures sur la même fenêtre
+    }
+    EXPECT_TRUE(fast.isAlarm());
 }

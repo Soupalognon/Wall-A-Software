@@ -40,9 +40,8 @@ void AdcSequencer::trigger() {
 	configureAndStart(0);
 }
 
-void AdcSequencer::wait() {
-	uint32_t flags = 0;
-	xTaskNotifyWait(0, _doneFlag, &flags, pdMS_TO_TICKS(100));
+uint32_t AdcSequencer::doneFlag() const {
+	return _doneFlag;
 }
 
 ADC_HandleTypeDef* AdcSequencer::getInstance() {

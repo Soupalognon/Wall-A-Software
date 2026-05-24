@@ -1,9 +1,9 @@
 #ifndef APP_DRIVERS_UARTCHANNEL_H
 #define APP_DRIVERS_UARTCHANNEL_H
 
-#include "Interfaces/ICommChannel.h"
 #include "main.h"
 #include <FreeRTOS.h>
+#include <Interfaces/ICom.h>
 #include <queue.h>
 #include <cstddef>
 

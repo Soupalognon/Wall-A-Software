@@ -4,8 +4,8 @@
 #include "Interfaces/IBus.h"
 #include "Config.h"
 #include "Interfaces/IActuatorManager.h"
-#include "Interfaces/ICommChannel.h"
 #include <FreeRTOS.h>
+#include <Interfaces/ICom.h>
 #include <queue.h>
 #include <cstdarg>
 #include <cstdint>

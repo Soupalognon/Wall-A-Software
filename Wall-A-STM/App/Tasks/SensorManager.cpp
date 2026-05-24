@@ -29,10 +29,17 @@ void SensorManager::task(void *param) {
 }
 
 void SensorManager::pollOnce() {
-	for (uint8_t i = 0; i < _adcGroupCount; ++i)
+	uint32_t allFlags = 0;
+	for (uint8_t i = 0; i < _adcGroupCount; ++i) {
 		_adcGroups[i]->trigger();
-	for (uint8_t i = 0; i < _adcGroupCount; ++i)
-		_adcGroups[i]->wait();
+		allFlags |= _adcGroups[i]->doneFlag();
+	}
+	uint32_t remaining = allFlags;
+	while (remaining != 0) {
+		uint32_t bits = 0;
+		xTaskNotifyWait(0, remaining, &bits, portMAX_DELAY);
+		remaining &= ~bits;
+	}
 
 	for (uint8_t i = 0; i < _sensorCount && i < Config::MAX_SENSORS; ++i) {
 		if (_sensors[i] == nullptr)

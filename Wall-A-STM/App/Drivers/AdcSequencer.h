@@ -12,7 +12,7 @@ class AdcSequencer: public IAnalogSource, public IAdcGroup {
 public:
 	void bind() override;
 	void trigger() override;
-	void wait() override;
+	uint32_t doneFlag() const override;
 	ADC_HandleTypeDef* getInstance();
 	void onConversionComplete();
 

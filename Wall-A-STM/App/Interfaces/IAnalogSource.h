@@ -5,8 +5,8 @@
 
 class IAnalogSource {
 public:
-    virtual float read(uint8_t channel) = 0;
-    virtual ~IAnalogSource() = default;
+	virtual float read(uint8_t channel) = 0;
+	virtual ~IAnalogSource() = default;
 };
 
 #endif // APP_INTERFACES_IANALOGSOURCE_H

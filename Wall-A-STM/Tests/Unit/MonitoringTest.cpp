@@ -62,8 +62,8 @@ TEST_F(MonitoringTest, AllStaleThreeAlerts) {
 
 TEST_F(MonitoringTest, OnlyOdoStaleOneAlert) {
     setMockTick(501);
-    SensorManager::latestSnapshot.timestamp = 501;
-    ExternalComm::latestSnapshot.timestamp  = 501;
+    SensorManager::latestSnapshot.timestamps[0] = 501;
+    ExternalComm::latestSnapshot.timestamp      = 501;
     Monitoring mon(&bus);
     mon.checkOnce();
     EXPECT_EQ(1u, bus.count(Topic::ALERT));

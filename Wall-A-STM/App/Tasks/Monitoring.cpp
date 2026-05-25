@@ -49,20 +49,26 @@ void Monitoring::checkOnce() {
 	sensorSnap = SensorManager::latestSnapshot;
 	taskEXIT_CRITICAL();
 
-	if (abs(now - sensorSnap.timestamp) > Config::MONITORING_STALE_MS) {
-		_bus->publish(Topic::ALERT, BusFormat::altStale("SENSORS"));
-	}
-	if (sensorSnap.alarmMask != 0) {
-		for (uint8_t i = 0; i < Config::MAX_SENSORS; i++) {
-			if (sensorSnap.alarmMask & (1u << i)) {
-				_bus->publish(Topic::ALERT, BusFormat::altSensorAlarm(SensorManager::sensorNames[i], sensorSnap.values[i]));
-			}
-		}
-	}
+//	uint32_t lastSensorUpdate = 0;
+//	for (uint8_t i = 0; i < Config::MAX_SENSORS; i++) {
+//		if (sensorSnap.timestamps[i] > lastSensorUpdate)
+//			lastSensorUpdate = sensorSnap.timestamps[i];
+//	}
+//	if (abs(now - lastSensorUpdate) > Config::MONITORING_STALE_MS) {
+//		_bus->publish(Topic::ALERT, BusFormat::altStale("SENSORS"));
+//	}
 
-	_bus->publish(Topic::HEALTH, BusFormat::hltSensors(sensorSnap.count, sensorSnap.alarmMask));
-	for (uint8_t i = 0; i < sensorSnap.count && i < Config::MAX_SENSORS; i++) {
+	_bus->publish(Topic::HEALTH, BusFormat::hltSensors(now, sensorSnap.count, sensorSnap.alarmMask));
+	for (uint8_t i = 0; i < Config::MAX_SENSORS; i++) {
+		if (sensorSnap.timestamps[i] == _lastSensorTs[i])
+			continue;
+		_lastSensorTs[i] = sensorSnap.timestamps[i];
+
+		if (sensorSnap.alarmMask & (1u << i)) {
+			_bus->publish(Topic::ALERT,
+				BusFormat::altSensorAlarm(sensorSnap.timestamps[i], SensorManager::sensorNames[i], sensorSnap.values[i]));
+		}
 		_bus->publish(Topic::HEALTH,
-			BusFormat::hltSensorValue(SensorManager::sensorNames[i], sensorSnap.values[i]));
+			BusFormat::hltSensorValue(sensorSnap.timestamps[i], SensorManager::sensorNames[i], sensorSnap.values[i]));
 	}
 }

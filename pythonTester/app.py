@@ -562,8 +562,8 @@ class App(tk.Tk):
             chk = '☑' if self._plot_enabled.get(key, False) else '☐'
             hz = self._store.freq_current.get(key)
             hz_max = self._store.freq_max.get(key)
-            freq_str = f'{hz:.1f}' if hz is not None else '—'
-            freq_max_str = f'{hz_max:.1f}' if hz_max is not None else '—'
+            freq_str = f'{round(hz)}' if hz is not None else '—'
+            freq_max_str = f'{round(hz_max)}' if hz_max is not None else '—'
             row = (chk, domain, subdomain, var, f'{val:.5g}', delta, freq_str, freq_max_str, ts)
             if key in self._tree_ids:
                 self._tree.item(self._tree_ids[key], values=row)

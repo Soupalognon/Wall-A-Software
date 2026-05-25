@@ -18,6 +18,7 @@ public:
 
 private:
 	IBus *_bus;
+	uint32_t _lastSensorTs[Config::MAX_SENSORS] = { };
 };
 
 #endif // APP_TASKS_MONITORING_H

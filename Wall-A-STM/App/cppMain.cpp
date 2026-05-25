@@ -68,12 +68,26 @@ static AnalogSensor curSL { SensorType::SecondaryMotorCurrentL, "CUR_SEC_L", &mo
 static AnalogSensor curSR { SensorType::SecondaryMotorCurrentR, "CUR_SEC_R", &motorsCurrentSense,
 	MotorCurrentSense::SECONDARY_MOTOR_RIGHT, Config::CURRENT_ALARM_MA };
 
-static ISensor *sensors[Config::MAX_SENSORS] = { &intTempPri, &intTempSec, &intTempPwr, &curPL,
-	&curPR, &curSL, &curSR };
-static uint8_t sensorCount = 7;
+// ── Sensors B5WLB2101 (hadc2 — 4 canaux) ─────────────────────────────────────
+static AnalogSensor proxCH1 { SensorType::ProximityCH1, "PROX_CH1", &proximity,
+	B5WLB2101::CH_1, Config::PROXIMITY_ALARM_M };
+static AnalogSensor proxCH2 { SensorType::ProximityCH2, "PROX_CH2", &proximity,
+	B5WLB2101::CH_2, Config::PROXIMITY_ALARM_M };
+static AnalogSensor proxCH3 { SensorType::ProximityCH3, "PROX_CH3", &proximity,
+	B5WLB2101::CH_3, Config::PROXIMITY_ALARM_M };
+static AnalogSensor proxCH4 { SensorType::ProximityCH4, "PROX_CH4", &proximity,
+	B5WLB2101::CH_4, Config::PROXIMITY_ALARM_M };
 
-// ── ADC groups (déclenchés en parallèle par SensorManager) ───────────────────
-static IAdcGroup *adcGroups[] = { &internalTemperatures, &motorsCurrentSense };
+// ── Sensor groups (chacun à sa propre fréquence) ─────────────────────────────
+static ISensor *tempSensors[] = { &intTempPri, &intTempSec, &intTempPwr };
+static ISensor *currentSensors[] = { &curPL, &curPR, &curSL, &curSR };
+//static ISensor *proximitySensors[] = { &proxCH1, &proxCH2, &proxCH3, &proxCH4 };
+
+static SensorManager::SensorGroup sensorGroups[] = {
+	{ &internalTemperatures, tempSensors,    std::size(tempSensors),    1000 / Config::TEMP_SENSOR_FREQ_HZ,    0 },
+	{ &motorsCurrentSense,   currentSensors, std::size(currentSensors), 1000 / Config::CURRENT_SENSOR_FREQ_HZ, 0 },
+//	{ &proximity,            proximitySensors, std::size(proximitySensors), 1000 / Config::B5W_SENSOR_FREQ_HZ, 0 },
+};
 
 // ── Actuators ─────────────────────────────────────────────────────────────────
 static ActuatorManager actuatorMgr { nullptr, 0, nullptr };
@@ -116,8 +130,7 @@ extern "C" void cppMain(void) {
 	createTask(Monitoring::task, "Monitor", Config::STACK_MONITORING, &monitoring,
 		Config::PRIO_MONITORING, nullptr);
 
-	static SensorManager sensorManager { sensors, sensorCount, MotionPlanner::handle, &extComm,
-		adcGroups, 2 };
+	static SensorManager sensorManager { sensorGroups, std::size(sensorGroups), MotionPlanner::handle, &extComm };
 	createTask(SensorManager::task, "SensorMgr", Config::STACK_SENSOR_MANAGER, &sensorManager,
 		Config::PRIO_SENSOR_MANAGER, nullptr);
 
@@ -135,4 +148,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 		internalTemperatures.onConversionComplete();
 	else if (hadc == motorsCurrentSense.getInstance())
 		motorsCurrentSense.onConversionComplete();
+	else if (hadc == proximity.getInstance())
+		proximity.onConversionComplete();
 }

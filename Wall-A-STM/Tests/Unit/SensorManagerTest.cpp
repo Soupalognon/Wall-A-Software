@@ -18,137 +18,132 @@ protected:
     }
 };
 
-TEST_F(SensorManagerTest, EmptySensorArrayNoCrash) {
-    ISensor* sensors[Config::MAX_SENSORS] = {};
-    SensorManager sm{sensors, 0, nullptr, &bus};
-    sm.pollOnce();
-    EXPECT_EQ(SensorManager::latestSnapshot.count, 0u);
+TEST_F(SensorManagerTest, EmptyGroupsNoCrash) {
+    SensorManager sm{nullptr, 0, nullptr, &bus};
+    EXPECT_NO_THROW(sm.pollDueGroups());
+    EXPECT_EQ(0u, SensorManager::latestSnapshot.count);
 }
 
-TEST_F(SensorManagerTest, SingleSensorNoAlarmNoNotify) {
+TEST_F(SensorManagerTest, SingleSensorNoAlarmNoBit) {
     MockSensor s0{0, "temp", 25.0f, false};
-    ISensor* sensors[Config::MAX_SENSORS] = {&s0};
-    SensorManager sm{sensors, 1, nullptr, &bus};
-    sm.pollOnce();
-    uint32_t bits = 0;
-    xTaskNotifyWait(0, 0, &bits, 0);
-    EXPECT_EQ(bits, 0u);
+    ISensor* sensors[] = {&s0};
+    MockAdcGroup adc;
+    SensorManager::SensorGroup groups[] = { {&adc, sensors, 1, 1000, 0} };
+    SensorManager sm{groups, 1, nullptr, &bus};
+    sm.pollDueGroups();
+    EXPECT_EQ(0u, SensorManager::latestSnapshot.alarmMask & 0x01u);
 }
 
-TEST_F(SensorManagerTest, HealthAlwaysPublished) {
-    MockSensor s0{0, "temp", 25.0f, false};
-    ISensor* sensors[Config::MAX_SENSORS] = {&s0};
-    SensorManager sm{sensors, 1, nullptr, &bus};
-    sm.pollOnce();
-    EXPECT_TRUE(bus.hasPublished(Topic::HEALTH));
-    EXPECT_TRUE(bus.published[0].payload.find("HLT SENSORS") != std::string::npos);
+TEST_F(SensorManagerTest, SingleSensorAlarmSetsBit0) {
+    MockSensor s0{0, "prox", 0.05f, true};
+    ISensor* sensors[] = {&s0};
+    MockAdcGroup adc;
+    SensorManager::SensorGroup groups[] = { {&adc, sensors, 1, 1000, 0} };
+    SensorManager sm{groups, 1, nullptr, &bus};
+    sm.pollDueGroups();
+    EXPECT_NE(0u, SensorManager::latestSnapshot.alarmMask & 0x01u);
 }
 
-TEST_F(SensorManagerTest, SingleSensorAlarmNotifiesBit0) {
-    MockSensor s0{0, "proximity", 0.05f, true};
-    ISensor* sensors[Config::MAX_SENSORS] = {&s0};
-    SensorManager sm{sensors, 1, nullptr, &bus};
-    sm.pollOnce();
-    uint32_t bits = 0;
-    xTaskNotifyWait(0, 0xFFFFFFFF, &bits, 0);
-    EXPECT_EQ(bits, 0x01u);
-}
-
-TEST_F(SensorManagerTest, SensorAtIndex3NotifiesBit3) {
-    ISensor* sensors[Config::MAX_SENSORS] = {};
+TEST_F(SensorManagerTest, SensorAtId3SetsBit3) {
     MockSensor s3{3, "current", 10.0f, true};
-    sensors[3] = &s3;
-    SensorManager sm{sensors, 4, nullptr, &bus};
-    sm.pollOnce();
-    uint32_t bits = 0;
-    xTaskNotifyWait(0, 0xFFFFFFFF, &bits, 0);
-    EXPECT_EQ(bits, 0x08u);
-}
-
-TEST_F(SensorManagerTest, FifteenSensorsNoneAlarming) {
-    MockSensor sensors_storage[15] = {
-        {0,"s0"}, {1,"s1"}, {2,"s2"}, {3,"s3"}, {4,"s4"},
-        {5,"s5"}, {6,"s6"}, {7,"s7"}, {8,"s8"}, {9,"s9"},
-        {10,"s10"},{11,"s11"},{12,"s12"},{13,"s13"},{14,"s14"}
-    };
-    ISensor* sensors[Config::MAX_SENSORS];
-    for (int i = 0; i < 15; ++i) sensors[i] = &sensors_storage[i];
-    SensorManager sm{sensors, 15, nullptr, &bus};
-    sm.pollOnce();
-    EXPECT_EQ(SensorManager::latestSnapshot.count, 15u);
-    uint32_t bits = 0;
-    xTaskNotifyWait(0, 0, &bits, 0);
-    EXPECT_EQ(bits, 0u);
-}
-
-TEST_F(SensorManagerTest, FifteenSensorsSensor7Alarming) {
-    MockSensor sensors_storage[15] = {
-        {0,"s0"}, {1,"s1"}, {2,"s2"}, {3,"s3"}, {4,"s4"},
-        {5,"s5"}, {6,"s6"}, {7,"s7",0.f,true},
-        {8,"s8"}, {9,"s9"}, {10,"s10"},{11,"s11"},{12,"s12"},{13,"s13"},{14,"s14"}
-    };
-    ISensor* sensors[Config::MAX_SENSORS];
-    for (int i = 0; i < 15; ++i) sensors[i] = &sensors_storage[i];
-    SensorManager sm{sensors, 15, nullptr, &bus};
-    sm.pollOnce();
-    uint32_t bits = 0;
-    xTaskNotifyWait(0, 0xFFFFFFFF, &bits, 0);
-    EXPECT_EQ(bits, 0x80u);
+    ISensor* sensors[] = {&s3};
+    MockAdcGroup adc;
+    SensorManager::SensorGroup groups[] = { {&adc, sensors, 1, 1000, 0} };
+    SensorManager sm{groups, 1, nullptr, &bus};
+    sm.pollDueGroups();
+    EXPECT_NE(0u, SensorManager::latestSnapshot.alarmMask & 0x08u);
 }
 
 TEST_F(SensorManagerTest, SnapshotValuesMatchSensorReads) {
     MockSensor s0{0, "temp", 42.5f, false};
     MockSensor s1{1, "prox", 0.1f,  false};
-    ISensor* sensors[Config::MAX_SENSORS] = {&s0, &s1};
-    SensorManager sm{sensors, 2, nullptr, &bus};
-    sm.pollOnce();
-    EXPECT_FLOAT_EQ(SensorManager::latestSnapshot.values[0], 42.5f);
-    EXPECT_FLOAT_EQ(SensorManager::latestSnapshot.values[1], 0.1f);
+    ISensor* sensors[] = {&s0, &s1};
+    MockAdcGroup adc;
+    SensorManager::SensorGroup groups[] = { {&adc, sensors, 2, 1000, 0} };
+    SensorManager sm{groups, 1, nullptr, &bus};
+    sm.pollDueGroups();
+    EXPECT_FLOAT_EQ(42.5f, SensorManager::latestSnapshot.values[0]);
+    EXPECT_FLOAT_EQ(0.1f,  SensorManager::latestSnapshot.values[1]);
 }
 
-TEST_F(SensorManagerTest, SnapshotAlarmsMatchSensorStates) {
-    MockSensor s0{0, "a", 0.f, false};
-    MockSensor s1{1, "b", 0.f, true};
-    ISensor* sensors[Config::MAX_SENSORS] = {&s0, &s1};
-    SensorManager sm{sensors, 2, nullptr, &bus};
-    sm.pollOnce();
-    EXPECT_FALSE(SensorManager::latestSnapshot.alarms[0]);
-    EXPECT_TRUE(SensorManager::latestSnapshot.alarms[1]);
+TEST_F(SensorManagerTest, AlarmBitClearsWhenAlarmStops) {
+    MockSensor s0{0, "temp", 100.0f, true};
+    ISensor* sensors[] = {&s0};
+    MockAdcGroup adc;
+    SensorManager::SensorGroup groups[] = { {&adc, sensors, 1, 1000, 0} };
+    SensorManager sm{groups, 1, nullptr, &bus};
+    sm.pollDueGroups();
+    EXPECT_NE(0u, SensorManager::latestSnapshot.alarmMask & 0x01u);
+
+    s0.setAlarm(false);
+    groups[0].nextDueTick = 0;          // make it due again
+    sm.pollDueGroups();
+    EXPECT_EQ(0u, SensorManager::latestSnapshot.alarmMask & 0x01u);
 }
 
-TEST_F(SensorManagerTest, SnapshotTimestampUpdated) {
-    ISensor* sensors[Config::MAX_SENSORS] = {};
-    SensorManager sm{sensors, 0, nullptr, &bus};
-    sm.pollOnce();
-    EXPECT_EQ(SensorManager::latestSnapshot.timestamp, 1000u);
+TEST_F(SensorManagerTest, TimestampPerSensorUpdated) {
+    MockSensor s0{0, "temp",   25.0f, false};
+    MockSensor s1{1, "cur",    1.0f,  false};
+    ISensor* sensorsA[] = {&s0};
+    ISensor* sensorsB[] = {&s1};
+    MockAdcGroup gA, gB;
+    SensorManager::SensorGroup groups[] = {
+        {&gA, sensorsA, 1, 1000, 0},
+        {&gB, sensorsB, 1, 200,  0},
+    };
+    SensorManager sm{groups, 2, nullptr, &bus};
+
+    setMockTick(1000);
+    sm.pollDueGroups();
+    EXPECT_EQ(1000u, SensorManager::latestSnapshot.timestamps[0]);
+    EXPECT_EQ(1000u, SensorManager::latestSnapshot.timestamps[1]);
+
+    // Avance le temps : seul le groupe à 200ms doit être dû
+    setMockTick(1300);
+    sm.pollDueGroups();
+    EXPECT_EQ(1000u, SensorManager::latestSnapshot.timestamps[0]); // groupe 1Hz pas encore dû
+    EXPECT_EQ(1300u, SensorManager::latestSnapshot.timestamps[1]); // groupe 5Hz dû
 }
 
-// ── AdcGroup integration ──────────────────────────────────────────────────────
-
-TEST_F(SensorManagerTest, AdcGroup_TriggerAndWaitCalledOnce) {
-    MockAdcGroup group;
-    IAdcGroup* groups[] = { &group };
-    ISensor* sensors[Config::MAX_SENSORS] = {};
-    SensorManager sm{sensors, 0, nullptr, &bus, groups, 1};
-    sm.pollOnce();
-    EXPECT_EQ(1, group.triggerCallCount);
-    EXPECT_EQ(1, group.waitCallCount);
+TEST_F(SensorManagerTest, GroupNotDueSkipsTrigger) {
+    MockAdcGroup adc;
+    SensorManager::SensorGroup groups[] = { {&adc, nullptr, 0, 1000, 5000} };
+    SensorManager sm{groups, 1, nullptr, &bus};
+    setMockTick(1000);
+    sm.pollDueGroups();
+    EXPECT_EQ(0, adc.triggerCallCount);
 }
 
-TEST_F(SensorManagerTest, TwoAdcGroups_BothTriggeredAndWaited) {
+TEST_F(SensorManagerTest, DueGroupTriggers) {
+    MockAdcGroup adc;
+    SensorManager::SensorGroup groups[] = { {&adc, nullptr, 0, 1000, 0} };
+    SensorManager sm{groups, 1, nullptr, &bus};
+    setMockTick(1000);
+    sm.pollDueGroups();
+    EXPECT_EQ(1, adc.triggerCallCount);
+}
+
+TEST_F(SensorManagerTest, TwoDueGroupsBothTriggered) {
     MockAdcGroup g0, g1;
-    IAdcGroup* groups[] = { &g0, &g1 };
-    ISensor* sensors[Config::MAX_SENSORS] = {};
-    SensorManager sm{sensors, 0, nullptr, &bus, groups, 2};
-    sm.pollOnce();
+    SensorManager::SensorGroup groups[] = {
+        {&g0, nullptr, 0, 1000, 0},
+        {&g1, nullptr, 0, 200,  0},
+    };
+    SensorManager sm{groups, 2, nullptr, &bus};
+    sm.pollDueGroups();
     EXPECT_EQ(1, g0.triggerCallCount);
-    EXPECT_EQ(1, g0.waitCallCount);
     EXPECT_EQ(1, g1.triggerCallCount);
-    EXPECT_EQ(1, g1.waitCallCount);
 }
 
-TEST_F(SensorManagerTest, NullAdcGroups_NoCrash) {
-    ISensor* sensors[Config::MAX_SENSORS] = {};
-    SensorManager sm{sensors, 0, nullptr, &bus};
-    EXPECT_NO_THROW(sm.pollOnce());
+TEST_F(SensorManagerTest, CountReflectsAllSensorsAcrossGroups) {
+    MockSensor s0{0, "a"}, s1{1, "b"}, s2{2, "c"};
+    ISensor* groupA[] = {&s0, &s1};
+    ISensor* groupB[] = {&s2};
+    MockAdcGroup gA, gB;
+    SensorManager::SensorGroup groups[] = {
+        {&gA, groupA, 2, 1000, 0},
+        {&gB, groupB, 1, 200,  0},
+    };
+    SensorManager sm{groups, 2, nullptr, &bus};
+    EXPECT_EQ(3u, SensorManager::latestSnapshot.count);
 }

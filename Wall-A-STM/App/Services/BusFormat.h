@@ -17,9 +17,9 @@ public:
 	static const char* altEncoderFault(const char *side);
 	static const char* altInitFailed(const char *side);
 	static const char* altStale(const char *module);
-	static const char* altSensorAlarm(const char* sensorName, float value);
-	static const char* hltSensors(uint8_t count, uint32_t alarmMask);
-	static const char* hltSensorValue(const char* sensorName, float value);
+	static const char* altSensorAlarm(uint32_t timestamp, const char* sensorName, float value);
+	static const char* hltSensors(uint32_t timestamp, uint8_t count, uint32_t alarmMask);
+	static const char* hltSensorValue(uint32_t timestamp, const char* sensorName, float value);
 };
 
 #endif // APP_SERVICES_BUSFORMAT_H

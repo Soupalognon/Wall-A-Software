@@ -73,21 +73,21 @@ const char* BusFormat::altStale(const char *module) {
 	return buf;
 }
 
-const char* BusFormat::altSensorAlarm(const char *sensorName, float value) {
+const char* BusFormat::altSensorAlarm(uint32_t timestamp, const char *sensorName, float value) {
 	static char buf[48];
-	snprintf(buf, sizeof(buf), "ALT SENSOR %s:%.1f\r\n", sensorName, value);
+	snprintf(buf, sizeof(buf), "ALT SENSOR time:%ld %s:%.1f\r\n", timestamp, sensorName, value);
 	return buf;
 }
 
-const char* BusFormat::hltSensors(uint8_t count, uint32_t alarmMask) {
-	static char buf[48];
-	snprintf(buf, sizeof(buf), "HLT SENSORS ALM:0x%08lX\r\n",
-		static_cast<unsigned long>(alarmMask));
+const char* BusFormat::hltSensors(uint32_t timestamp, uint8_t count, uint32_t alarmMask) {
+	static char buf[64];
+
+	snprintf(buf, sizeof(buf), "HLT SENSORS time:%ld NUMBER:%d ALARM:0x%08lX\r\n", timestamp, count, alarmMask);
 	return buf;
 }
 
-const char* BusFormat::hltSensorValue(const char *sensorName, float value) {
-	static char buf[48];
-	snprintf(buf, sizeof(buf), "HLT SENSOR %s:%.2f\r\n", sensorName, value);
+const char* BusFormat::hltSensorValue(uint32_t timestamp, const char *sensorName, float value) {
+	static char buf[64];
+	snprintf(buf, sizeof(buf), "HLT SENSOR time:%ld %s:%.2f\r\n", timestamp, sensorName, value);
 	return buf;
 }

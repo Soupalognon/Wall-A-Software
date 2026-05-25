@@ -4,61 +4,93 @@
 #include "stm32f4xx_hal.h"
 
 SensorManager::SensorSnapshot SensorManager::latestSnapshot { };
-const char* SensorManager::sensorNames[Config::MAX_SENSORS] { };
+const char *SensorManager::sensorNames[Config::MAX_SENSORS] { };
 
-SensorManager::SensorManager(ISensor **sensors, uint8_t sensorCount,
-	TaskHandle_t motionPlannerHandle, IBus *bus, IAdcGroup **adcGroups, uint8_t adcGroupCount) :
-	_sensors(sensors), _sensorCount(sensorCount), _motionPlannerHandle(motionPlannerHandle), _bus(
-		bus), _adcGroups(adcGroups), _adcGroupCount(adcGroupCount) {
-	for (uint8_t i = 0; i < sensorCount && i < Config::MAX_SENSORS; ++i)
-		sensorNames[i] = (sensors[i] != nullptr) ? sensors[i]->name() : "";
+SensorManager::SensorManager(SensorGroup *groups, uint8_t groupCount,
+	TaskHandle_t motionPlannerHandle, IBus *bus) :
+	_groups(groups), _groupCount(groupCount), _motionPlannerHandle(motionPlannerHandle), _bus(bus) {
+
+	uint8_t total = 0;
+	for (uint8_t g = 0; g < _groupCount; ++g) {
+		for (uint8_t s = 0; s < _groups[g].sensorCount; ++s) {
+			ISensor *sensor = _groups[g].sensors[s];
+			if (sensor == nullptr)
+				continue;
+			uint8_t id = sensor->id();
+			if (id < Config::MAX_SENSORS) {
+				sensorNames[id] = sensor->name();
+				++total;
+			}
+		}
+	}
+	latestSnapshot.count = total;
 }
 
 void SensorManager::task(void *param) {
 	auto *self = static_cast<SensorManager*>(param);
 
-	for (uint8_t i = 0; i < self->_adcGroupCount; ++i)
-		self->_adcGroups[i]->bind();
+	uint32_t now = HAL_GetTick();
+	for (uint8_t i = 0; i < self->_groupCount; ++i) {
+		self->_groups[i].adcGroup->bind();
+		self->_groups[i].nextDueMs = now;
+	}
 
 	ExternalComm::log_info("SensorManager: Init OK");
 	for (;;) {
-		vTaskDelay(pdMS_TO_TICKS(1000 / Config::SENSOR_FREQ_HZ));
+		self->pollDueGroups();
 
-		self->pollOnce();
+		now = HAL_GetTick();
+		uint32_t next = self->_groups[0].nextDueMs;
+		for (uint8_t i = 1; i < self->_groupCount; ++i) {
+			if (self->_groups[i].nextDueMs < next)	//Find smallest wakeup
+				next = self->_groups[i].nextDueMs;
+		}
+
+		int32_t sleepMs = (int32_t) (next - now);
+		if (sleepMs > 0)
+			vTaskDelay(pdMS_TO_TICKS(sleepMs));
 	}
 }
 
-void SensorManager::pollOnce() {
-	uint32_t allFlags = 0;
-	for (uint8_t i = 0; i < _adcGroupCount; ++i) {
-		_adcGroups[i]->trigger();
-		allFlags |= _adcGroups[i]->doneFlag();
-	}
-	uint32_t remaining = allFlags;
-	while (remaining != 0) {
-		uint32_t bits = 0;
-		xTaskNotifyWait(0, remaining, &bits, portMAX_DELAY);
-		remaining &= ~bits;
-	}
+void SensorManager::pollDueGroups() {
+	uint32_t now = HAL_GetTick();
+	for (uint8_t i = 0; i < _groupCount; ++i) {
+		SensorGroup &g = _groups[i];
 
-	for (uint8_t i = 0; i < _sensorCount && i < Config::MAX_SENSORS; ++i) {
-		if (_sensors[i] == nullptr)
+		if (g.nextDueMs > now)
 			continue;
 
-		float value = _sensors[i]->read();
-		bool alarm = _sensors[i]->isAlarm();
-
-		latestSnapshot.values[i] = value;
-
-		if (alarm) {
-			latestSnapshot.alarmMask |= (1u << i);
+		g.adcGroup->trigger();
+		uint32_t flag = g.adcGroup->doneFlag();
+		while (flag != 0) {
+			uint32_t bits = 0;
+			xTaskNotifyWait(0, flag, &bits, portMAX_DELAY);
+			flag &= ~bits;
 		}
+
+		for (uint8_t s = 0; s < g.sensorCount; ++s) {
+			ISensor *sensor = g.sensors[s];
+			if (sensor == nullptr)
+				continue;
+
+			uint8_t id = sensor->id();
+			if (id >= Config::MAX_SENSORS)
+				continue;
+
+			float value = sensor->read();
+			bool alarm = sensor->isAlarm();
+
+			latestSnapshot.values[id] = value;
+			latestSnapshot.timestamps[id] = HAL_GetTick();
+			if (alarm)
+				latestSnapshot.alarmMask |= (1u << id);
+			else
+				latestSnapshot.alarmMask &= ~(1u << id);
+		}
+
+		now = HAL_GetTick();
+		g.nextDueMs += g.periodMs;
+		while (g.nextDueMs <= now)
+			g.nextDueMs += g.periodMs;
 	}
-
-	latestSnapshot.count = _sensorCount;
-	latestSnapshot.timestamp = HAL_GetTick();
-
-// if (alarmMask != 0) {
-// 	xTaskNotify(_motionPlannerHandle, alarmMask, eSetBits);
-// }
 }

@@ -31,6 +31,7 @@ static constexpr uint32_t ODO_FREQ_HZ = 200;
 static constexpr uint32_t TEMP_SENSOR_FREQ_HZ = 1;
 static constexpr uint32_t CURRENT_SENSOR_FREQ_HZ = 5;
 static constexpr uint32_t B5W_SENSOR_FREQ_HZ = 10;
+static constexpr uint32_t POLOLU5472_SENSOR_FREQ_HZ = 10;
 static constexpr uint32_t MONITORING_FREQ_HZ = 10;
 
 // Fixed array bounds (NFR-02 - no dynamic allocation)
@@ -74,6 +75,7 @@ static constexpr float PID_KD_ANGLE_DEFAULT = 0.01f;
 
 // Sensor alarm thresholds
 static constexpr float PROXIMITY_ALARM_M = 50.0f;
+static constexpr float POLOLU5472_ALARM_US = 1000.0f; // à calibrer selon le capteur
 static constexpr float TEMP_ALARM_C = 60.0f;
 static constexpr float CURRENT_ALARM_MA = 4000.0f;
 

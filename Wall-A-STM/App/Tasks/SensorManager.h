@@ -2,7 +2,7 @@
 #define APP_TASKS_SENSORMANAGER_H
 
 #include "Interfaces/ISensor.h"
-#include "Interfaces/IAdcGroup.h"
+#include "Interfaces/ISensorSource.h"
 #include "Interfaces/IBus.h"
 #include "Config.h"
 #include <FreeRTOS.h>
@@ -21,6 +21,10 @@ constexpr uint8_t ProximityCH1 = 7;
 constexpr uint8_t ProximityCH2 = 8;
 constexpr uint8_t ProximityCH3 = 9;
 constexpr uint8_t ProximityCH4 = 10;
+constexpr uint8_t PololuProxCH1 = 11;
+constexpr uint8_t PololuProxCH2 = 12;
+constexpr uint8_t PololuProxCH3 = 13;
+constexpr uint8_t PololuProxCH4 = 14;
 }
 
 class SensorManager {
@@ -35,7 +39,7 @@ public:
 	static const char* sensorNames[Config::MAX_SENSORS];
 
 	struct SensorGroup {
-		IAdcGroup *adcGroup;
+		ISensorSource *source;
 		ISensor **sensors;
 		uint8_t sensorCount;
 		uint32_t periodMs;

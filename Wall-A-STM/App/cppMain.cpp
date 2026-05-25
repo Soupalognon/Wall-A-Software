@@ -21,6 +21,7 @@
 #include "Services/MotorCurrentSense.h"
 #include "Services/B5WLB2101.h"
 #include "Services/AnalogSensor.h"
+#include "Services/ProximeterPololu5472.h"
 
 #include "Interfaces/IEncoderHAL.h"
 #include "Interfaces/IMotorHAL.h"
@@ -53,6 +54,7 @@ static InternalTemperature internalTemperatures { &hadc3 };
 
 static Drv8262 drv { &htim1 };
 static InputCapture inputCapture { &htim3 };
+static ProximeterPololu5472 pololuProximity { &inputCapture };
 
 static QueueHandle_t cmdMailbox = xQueueCreate(1, sizeof(MoveCmd));
 static QueueHandle_t setpointMailbox = xQueueCreate(1, sizeof(Setpoint));
@@ -85,15 +87,27 @@ static AnalogSensor proxCH3 { SensorType::ProximityCH3, "PROX_CH3", &proximity,
 static AnalogSensor proxCH4 { SensorType::ProximityCH4, "PROX_CH4", &proximity,
 	B5WLB2101::CH_4, Config::PROXIMITY_ALARM_M };
 
+// ── Sensors ProximeterPololu5472 (htim3 — 4 canaux InputCapture) ──────────────
+static AnalogSensor polCH1 { SensorType::PololuProxCH1, "POL_CH1", &pololuProximity,
+	ProximeterPololu5472::CH_1, Config::POLOLU5472_ALARM_US };
+static AnalogSensor polCH2 { SensorType::PololuProxCH2, "POL_CH2", &pololuProximity,
+	ProximeterPololu5472::CH_2, Config::POLOLU5472_ALARM_US };
+static AnalogSensor polCH3 { SensorType::PololuProxCH3, "POL_CH3", &pololuProximity,
+	ProximeterPololu5472::CH_3, Config::POLOLU5472_ALARM_US };
+static AnalogSensor polCH4 { SensorType::PololuProxCH4, "POL_CH4", &pololuProximity,
+	ProximeterPololu5472::CH_4, Config::POLOLU5472_ALARM_US };
+
 // ── Sensor groups (chacun à sa propre fréquence) ─────────────────────────────
 static ISensor *tempSensors[] = { &intTempPri, &intTempSec, &intTempPwr };
 static ISensor *currentSensors[] = { &curPL, &curPR, &curSL, &curSR };
 //static ISensor *proximitySensors[] = { &proxCH1, &proxCH2, &proxCH3, &proxCH4 };
+static ISensor *pololuSensors[] = { &polCH1, &polCH2, &polCH3, &polCH4 };
 
 static SensorManager::SensorGroup sensorGroups[] = {
 	{ &internalTemperatures, tempSensors,    std::size(tempSensors),    1000 / Config::TEMP_SENSOR_FREQ_HZ,    0 },
 	{ &motorsCurrentSense,   currentSensors, std::size(currentSensors), 1000 / Config::CURRENT_SENSOR_FREQ_HZ, 0 },
 //	{ &proximity,            proximitySensors, std::size(proximitySensors), 1000 / Config::B5W_SENSOR_FREQ_HZ, 0 },
+	{ &pololuProximity,      pololuSensors,  std::size(pololuSensors),  1000 / Config::POLOLU5472_SENSOR_FREQ_HZ, 0 },
 };
 
 // ── Actuators ─────────────────────────────────────────────────────────────────

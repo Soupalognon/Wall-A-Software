@@ -31,7 +31,7 @@ void SensorManager::task(void *param) {
 
 	uint32_t now = HAL_GetTick();
 	for (uint8_t i = 0; i < self->_groupCount; ++i) {
-		self->_groups[i].adcGroup->bind();
+		self->_groups[i].source->bind();
 		self->_groups[i].nextDueMs = now;
 	}
 
@@ -60,8 +60,8 @@ void SensorManager::pollDueGroups() {
 		if (g.nextDueMs > now)
 			continue;
 
-		g.adcGroup->trigger();
-		uint32_t flag = g.adcGroup->doneFlag();
+		g.source->trigger();
+		uint32_t flag = g.source->doneFlag();
 		while (flag != 0) {
 			uint32_t bits = 0;
 			xTaskNotifyWait(0, flag, &bits, portMAX_DELAY);

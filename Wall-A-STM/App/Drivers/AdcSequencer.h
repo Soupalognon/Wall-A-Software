@@ -6,9 +6,9 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "Interfaces/IAnalogSource.h"
-#include "Interfaces/IAdcGroup.h"
+#include "Interfaces/ISensorSource.h"
 
-class AdcSequencer: public IAnalogSource, public IAdcGroup {
+class AdcSequencer: public IAnalogSource, public ISensorSource {
 public:
 	void bind() override;
 	void trigger() override;

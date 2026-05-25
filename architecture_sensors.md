@@ -18,17 +18,56 @@ classDiagram
         +read(ch uint8_t) float
     }
 
-    class IAdcGroup {
+    class ISensorSource {
         <<interface>>
         +bind()
         +trigger()
         +doneFlag() uint32_t
     }
 
+    class IInputCaptureHAL {
+        <<interface>>
+    }
+
     class IBus {
         <<interface>>
         +publish(topic, payload)
     }
+
+    %% ── SensorManager ───────────────────────────────────────────────────────
+    class SensorManager {
+        +latestSnapshot$ SensorSnapshot
+        +sensorNames$[] const char*
+        -SensorGroup* _groups
+        -uint8_t _groupCount
+        -TaskHandle_t _motionPlannerHandle
+        -IBus* _bus
+        +task(param)$ void
+        +pollDueGroups()
+    }
+
+    class SensorGroup {
+        <<struct>>
+        +ISensorSource* source
+        +ISensor** sensors
+        +uint8_t sensorCount
+        +uint32_t periodMs
+        +uint32_t nextDueMs
+    }
+
+    class SensorSnapshot {
+        <<struct>>
+        +values[MAX_SENSORS] float
+        +timestamps[MAX_SENSORS] uint32_t
+        +alarmMask uint32_t
+        +count uint8_t
+    }
+
+    SensorManager *-- SensorGroup     : _groups[]
+    SensorManager *-- SensorSnapshot  : latestSnapshot
+    SensorManager --> IBus            : _bus
+    SensorGroup   --> ISensorSource   : source
+    SensorGroup   --> ISensor         : sensors[]
 
     %% ── AdcSequencer (base class) ────────────────────────────────────────────
     class AdcSequencer {
@@ -39,36 +78,43 @@ classDiagram
         -uint8_t _maxChannel
         -uint16_t* _rawValues
         -TaskHandle_t _notifyThreadId
-        -uint8_t _conversionIndex
-        #rawValues() uint16_t*
         +bind()
         +trigger()
         +doneFlag() uint32_t
-        +getInstance() ADC_HandleTypeDef*
+        +read(ch uint8_t) float
         +onConversionComplete()
-        -configureAndStart(index uint8_t)
     }
 
     IAnalogSource <|.. AdcSequencer
-    IAdcGroup     <|.. AdcSequencer
+    ISensorSource <|.. AdcSequencer
 
-    %% ── Drivers hardware (spécialisent AdcSequencer) ────────────────────────
+    %% ── Drivers ADC ─────────────────────────────────────────────────────────
     class InternalTemperature {
         -uint16_t rawBuf[3]
         +read(ch uint8_t) float
-        __channels: PRIMARY_MOTOR__
-        __         SECONDARY_MOTOR__
-        __         POWER_SUPPLIES__
+        __channels: TEMP_PRI / SEC / PWR__
     }
 
     class MotorCurrentSense {
         -uint16_t rawBuf[4]
         +read(ch uint8_t) float
-        __channels: PL / PR / SL / SR__
+        __channels: CUR_PL / PR / SL / SR__
     }
 
     AdcSequencer <|-- InternalTemperature
     AdcSequencer <|-- MotorCurrentSense
+
+    %% ── Driver InputCapture ──────────────────────────────────────────────────
+    class ProximeterPololu5472 {
+        +read(ch uint8_t) float
+        +trigger()
+        +doneFlag() uint32_t
+        __channels: CH1..CH4 (largeur µs)__
+    }
+
+    IAnalogSource <|.. ProximeterPololu5472
+    ISensorSource <|.. ProximeterPololu5472
+    ProximeterPololu5472 --> IInputCaptureHAL : _ic
 
     %% ── Sensor générique ────────────────────────────────────────────────────
     class AnalogSensor {
@@ -82,47 +128,35 @@ classDiagram
         -uint32_t _periodWindowMs
         -uint8_t _periodMinCount
         -uint32_t _timestamps[16]
-        -uint8_t _tsHead
-        -uint8_t _tsCount
         +id() uint8_t
         +name() const char*
         +read() float
         +isAlarm() bool
     }
 
-    ISensor       <|.. AnalogSensor
-    AnalogSensor  ..>  IAnalogSource : uses
+    ISensor      <|.. AnalogSensor
+    AnalogSensor --> IAnalogSource : _src
 
-    %% ── Tâche FreeRTOS ───────────────────────────────────────────────────────
-    class SensorManager {
-        +latestSnapshot$ SensorSnapshot
-        +sensorNames$[] const char*
-        -ISensor** _sensors
-        -uint8_t _sensorCount
-        -IAdcGroup** _adcGroups
-        -uint8_t _adcGroupCount
-        -IBus* _bus
-        -TaskHandle_t _motionPlannerHandle
-        +pollOnce()
-        +task(param)$ void
-        __pollOnce()__
-        1. trigger all adcGroups
-        2. OR all doneFlags → allFlags
-        3. xTaskNotifyWait loop until remaining==0
-        4. read + snapshot all sensors
+    %% ── Dépendances externes ─────────────────────────────────────────────────
+    class ExternalComm {
+        <<extern>>
+        +log_info(msg)$
     }
 
-    class SensorSnapshot {
-        +values[] float
-        +alarmMask uint32_t
-        +count uint8_t
-        +timestamp uint32_t
+    class HAL {
+        <<extern>>
+        +GetTick() uint32_t
     }
 
-    SensorManager --> ISensor        : polls[]
-    SensorManager --> IAdcGroup      : trigger[] doneFlag[]
-    SensorManager --> IBus           : (réservé)
-    SensorManager *-- SensorSnapshot : latestSnapshot
+    class FreeRTOS {
+        <<extern>>
+        +xTaskNotifyWait()
+        +vTaskDelay()
+    }
+
+    SensorManager ..> ExternalComm : log_info
+    SensorManager ..> HAL          : GetTick
+    SensorManager ..> FreeRTOS     : notify / delay
 
     %% ── Namespace SensorType ─────────────────────────────────────────────────
     class SensorType {
@@ -134,6 +168,8 @@ classDiagram
         PrimaryMotorCurrentR = 4
         SecondaryMotorCurrentL = 5
         SecondaryMotorCurrentR = 6
+        ProximityCH1..4 = 7..10
+        PololuProxCH1..4 = 11..14
     }
 
     %% ── Mocks (tests) ────────────────────────────────────────────────────────
@@ -145,7 +181,7 @@ classDiagram
         <<test mock>>
         +values[4] configurables
     }
-    class MockAdcGroup {
+    class MockSensorSource {
         <<test mock>>
         +doneFlag() uint32_t
         +triggerCallCount
@@ -153,37 +189,38 @@ classDiagram
 
     ISensor       <|.. MockSensor
     IAnalogSource <|.. MockAnalogSource
-    IAdcGroup     <|.. MockAdcGroup
+    ISensorSource <|.. MockSensorSource
 ```
 
-## Flux ISR (callbacks ADC)
+## Flux ISR / polling (pollDueGroups)
 
 ```mermaid
 sequenceDiagram
-    participant SM as SensorManager::pollOnce()
-    participant IT as InternalTemperature (hadc3)
-    participant MC as MotorCurrentSense (hadc1)
+    participant SM as SensorManager::pollDueGroups()
+    participant G  as SensorGroup (IT ou MC)
+    participant S  as ISensorSource (AdcSequencer)
     participant ISR as HAL_ADC_ConvCpltCallback
 
     Note over SM: bind() appelé une seule fois dans task() au démarrage
 
-    SM->>IT: trigger() — démarre ch0
-    SM->>MC: trigger() — démarre ch0
-    Note over SM: allFlags = IT.doneFlag() | MC.doneFlag()
-    Note over IT,MC: Les deux ADC tournent en parallèle
+    SM->>G: nextDueMs <= now ?
+    G-->>SM: oui
+    SM->>S: trigger() — démarre ch0
+    Note over SM: flag = source.doneFlag()
 
-    ISR->>IT: onConversionComplete() ch0 → ch1 → ch2
-    IT-->>SM: xTaskNotifyFromISR(flag=0x01)
-    ISR->>MC: onConversionComplete() ch0 → ch1 → ch2 → ch3
-    MC-->>SM: xTaskNotifyFromISR(flag=0x02)
+    ISR->>S: onConversionComplete() ch0 → ch1 → ... → chN
+    S-->>SM: xTaskNotifyFromISR(flag)
 
-    loop remaining != 0
-        SM->>SM: xTaskNotifyWait(0, remaining, &bits, MAX_DELAY)
-        SM->>SM: remaining &= ~bits
+    loop flag != 0
+        SM->>SM: xTaskNotifyWait(0, flag, &bits, MAX_DELAY)
+        SM->>SM: flag &= ~bits
     end
 
-    Note over SM: Lit les sensors via AnalogSensor.read()<br/>qui appelle IAnalogSource.read(channel)<br/>Résultat stocké dans latestSnapshot
+    SM->>SM: lire tous les ISensor du groupe → latestSnapshot
+    SM->>SM: nextDueMs += periodMs
 ```
+
+> **Note :** `ProximeterPololu5472` retourne `doneFlag() == 0` (ISR InputCapture alimente les données en continu) — l'attente `xTaskNotifyWait` est donc ignorée pour ce groupe.
 
 ## Alarme `AnalogSensor` — deux modes
 
@@ -194,19 +231,25 @@ sequenceDiagram
 
 ## Relation IAnalogSource / ISensor
 
-Un même `AdcSequencer` (ex: `InternalTemperature`) est injecté dans plusieurs `AnalogSensor`, chacun lisant un canal différent :
+Un même driver (ex: `InternalTemperature`) est injecté dans plusieurs `AnalogSensor`, chacun lisant un canal différent via `IAnalogSource::read(ch)` :
 
 ```
-InternalTemperature (IAnalogSource)
+InternalTemperature (ISensorSource + IAnalogSource)
     ├── AnalogSensor(id=0, "TEMP_PRI",  src, ch=0)  →  ISensor  [SensorType::PrimaryMotorTemp]
     ├── AnalogSensor(id=1, "TEMP_SEC",  src, ch=1)  →  ISensor  [SensorType::SecondaryMotorTemp]
     └── AnalogSensor(id=2, "TEMP_PWR",  src, ch=2)  →  ISensor  [SensorType::PowerSupplyTemp]
 
-MotorCurrentSense (IAnalogSource)
+MotorCurrentSense (ISensorSource + IAnalogSource)
     ├── AnalogSensor(id=3, "CUR_PL", src, ch=0)  →  ISensor  [SensorType::PrimaryMotorCurrentL]
     ├── AnalogSensor(id=4, "CUR_PR", src, ch=1)  →  ISensor  [SensorType::PrimaryMotorCurrentR]
     ├── AnalogSensor(id=5, "CUR_SL", src, ch=2)  →  ISensor  [SensorType::SecondaryMotorCurrentL]
     └── AnalogSensor(id=6, "CUR_SR", src, ch=3)  →  ISensor  [SensorType::SecondaryMotorCurrentR]
+
+ProximeterPololu5472 (ISensorSource + IAnalogSource)
+    ├── AnalogSensor(id=11, "PROX_P1", src, ch=0)  →  ISensor  [SensorType::PololuProxCH1]
+    ├── AnalogSensor(id=12, "PROX_P2", src, ch=1)  →  ISensor  [SensorType::PololuProxCH2]
+    ├── AnalogSensor(id=13, "PROX_P3", src, ch=2)  →  ISensor  [SensorType::PololuProxCH3]
+    └── AnalogSensor(id=14, "PROX_P4", src, ch=3)  →  ISensor  [SensorType::PololuProxCH4]
 ```
 
-> **Note :** Les IDs numériques ci-dessus correspondent aux constantes `SensorType::*` et à l'index dans `SensorSnapshot::values[]`.
+> **Note :** Les IDs numériques correspondent aux constantes `SensorType::*` et à l'index dans `SensorSnapshot::values[]`.

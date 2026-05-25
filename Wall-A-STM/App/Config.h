@@ -28,7 +28,9 @@ static constexpr ComQueuePolicy ETH_POLICY = { false, false, false, false };
 
 // Task frequency
 static constexpr uint32_t ODO_FREQ_HZ = 200;
-static constexpr uint32_t SENSOR_FREQ_HZ = 10;
+static constexpr uint32_t TEMP_SENSOR_FREQ_HZ = 1;
+static constexpr uint32_t CURRENT_SENSOR_FREQ_HZ = 5;
+static constexpr uint32_t B5W_SENSOR_FREQ_HZ = 10;
 static constexpr uint32_t MONITORING_FREQ_HZ = 10;
 
 // Fixed array bounds (NFR-02 - no dynamic allocation)
@@ -71,7 +73,7 @@ static constexpr float PID_KI_ANGLE_DEFAULT = 0.1f;
 static constexpr float PID_KD_ANGLE_DEFAULT = 0.01f;
 
 // Sensor alarm thresholds
-static constexpr float PROXIMITY_ALARM_M = 0.20f;
+static constexpr float PROXIMITY_ALARM_M = 50.0f;
 static constexpr float TEMP_ALARM_C = 60.0f;
 static constexpr float CURRENT_ALARM_MA = 4000.0f;
 

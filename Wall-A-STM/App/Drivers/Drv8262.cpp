@@ -4,18 +4,16 @@
 #include <algorithm>
 #include <cmath>
 
-extern TIM_HandleTypeDef htim1;
-
 bool Drv8262::begin() {
 //	ExternalComm::log_info("Drv8262: Initialisation...");
 
-	HAL_StatusTypeDef rc1 = HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	HAL_StatusTypeDef rc1 = HAL_TIM_PWM_Start(_htim, TIM_CHANNEL_1);
 	if (rc1 != HAL_OK) {
 		ExternalComm::log_error("Drv8262: Error starting PWM CH1 (status=%d). Block thread", rc1);
 		return 1;
 	}
 
-	HAL_StatusTypeDef rc2 = HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+	HAL_StatusTypeDef rc2 = HAL_TIM_PWM_Start(_htim, TIM_CHANNEL_3);
 	if (rc2 != HAL_OK) {
 		ExternalComm::log_error("Drv8262: Error starting PWM CH3 (status=%d). Block thread", rc2);
 		return 1;
@@ -57,12 +55,12 @@ static void setRightDirection(float duty) {
 
 void Drv8262::setLeftDuty(float duty) {
 	setLeftDirection(duty);
-	TIM1->CCR1 = dutyToCCR(duty);
+	_htim->Instance->CCR1 = dutyToCCR(duty);
 }
 
 void Drv8262::setRightDuty(float duty) {
 	setRightDirection(duty);
-	TIM1->CCR3 = dutyToCCR(duty);
+	_htim->Instance->CCR3 = dutyToCCR(duty);
 }
 
 void Drv8262::enable(bool en) {

@@ -1,6 +1,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
+#include <iterator>
 
 #include "Tasks/MotionPlanner.h"
 #include "Tasks/OdoControl.h"
@@ -12,11 +13,13 @@
 #include "Drivers/UartChannel.h"
 #include "Drivers/UsbCdcChannel.h"
 #include "Drivers/Encoder.h"
+#include "Drivers/InputCapture.h"
 
 #include "Services/Odometry.h"
 #include "Services/ActuatorManager.h"
 #include "Services/InternalTemperature.h"
 #include "Services/MotorCurrentSense.h"
+#include "Services/B5WLB2101.h"
 #include "Services/AnalogSensor.h"
 
 #include "Interfaces/IEncoderHAL.h"
@@ -29,6 +32,8 @@
 
 extern USBD_HandleTypeDef hUsbDeviceFS;
 extern UART_HandleTypeDef huart1;
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim8;
 extern TIM_HandleTypeDef htim10;
@@ -42,10 +47,12 @@ static UsbCdcChannel usbCh { &hUsbDeviceFS };
 static Encoder encL { &htim4 }, encR { &htim8 };
 static Odometry odomHAL { &encL, &encR };
 
-static InternalTemperature internalTemperatures { &hadc3 };
 static MotorCurrentSense motorsCurrentSense { &hadc1 };
+static B5WLB2101 proximity { &hadc2 };
+static InternalTemperature internalTemperatures { &hadc3 };
 
-static Drv8262 drv { };
+static Drv8262 drv { &htim1 };
+static InputCapture inputCapture { &htim3 };
 
 static QueueHandle_t cmdMailbox = xQueueCreate(1, sizeof(MoveCmd));
 static QueueHandle_t setpointMailbox = xQueueCreate(1, sizeof(Setpoint));
@@ -116,6 +123,7 @@ void enable(bool en) {
 
 extern "C" void cppMain(void) {
 	actuatorMgr.setBus(&extComm); // circular dep resolution: actuatorMgr constructed before extComm
+	inputCapture.init();
 
 	createTask(ExternalComm::rxTask, "ExtRX", Config::STACK_EXTCOMM_RX, &extComm,
 		Config::PRIO_EXTCOMM_RX, nullptr);

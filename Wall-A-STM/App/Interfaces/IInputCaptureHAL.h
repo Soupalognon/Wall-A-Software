@@ -8,8 +8,8 @@ class IInputCaptureHAL {
 public:
 	virtual ~IInputCaptureHAL() = default;
 	virtual bool init() = 0;
-	virtual uint32_t getLastPulse(uint32_t channel) const = 0;
-	virtual bool hasNewPulse(uint32_t channel) const = 0;
+	virtual uint32_t getLastPulse(uint8_t channel) = 0;
+	virtual bool hasNewPulse(uint8_t channel) const = 0;
 };
 
 #endif // APP_INTERFACES_IINPUTCAPTUREHAL_H

@@ -86,6 +86,9 @@ void SensorManager::pollDueGroups() {
 				latestSnapshot.alarmMask |= (1u << id);
 			else
 				latestSnapshot.alarmMask &= ~(1u << id);
+
+			if (s == 0)
+				ExternalComm::log_info("val=%.1f", value);
 		}
 
 		now = HAL_GetTick();

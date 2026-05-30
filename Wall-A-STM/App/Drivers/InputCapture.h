@@ -7,26 +7,27 @@
 
 class InputCapture : public IInputCaptureHAL {
 public:
-	explicit InputCapture(TIM_HandleTypeDef *htim) : _htim(htim) { }
+	explicit InputCapture(TIM_HandleTypeDef *htim);
 
 	bool init() override;
-	uint32_t getLastPulse(uint32_t channel) const override;  // résultat en µs (PSC=83 @ 84 MHz)
-	bool hasNewPulse(uint32_t channel) const override;
+	uint32_t getLastPulse(uint8_t channel) override;  // résultat en µs (PSC=83 @ 84 MHz)
+	bool hasNewPulse(uint8_t channel) const override;
 
 	static void dispatchCallback(TIM_HandleTypeDef *htim);
 
 private:
 	TIM_HandleTypeDef *_htim = nullptr;
 
-	uint32_t _riseTime[4]      = {};
-	uint32_t _pulseWidth[4]    = {};
-	bool     _firstCaptured[4] = {};
-	bool     _hasNew[4]        = {};
+	static constexpr uint8_t CHANNEL_SIZE = 4;
+
+	uint32_t _riseTime[CHANNEL_SIZE]      = {};
+	uint32_t _pulseWidth[CHANNEL_SIZE]    = {};
+	bool     _firstCaptured[CHANNEL_SIZE] = {};
+	bool     _hasNew[CHANNEL_SIZE]        = {};
 
 	void handleChannel(int idx, uint32_t channel);
 
-	static InputCapture *_instances[2];
-	static int           _instanceCount;
+	static InputCapture *_instances;
 };
 
 #endif // APP_DRIVERS_INPUTCAPTURE_H

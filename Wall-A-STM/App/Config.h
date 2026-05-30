@@ -75,7 +75,7 @@ static constexpr float PID_KD_ANGLE_DEFAULT = 0.01f;
 
 // Sensor alarm thresholds
 static constexpr float PROXIMITY_ALARM_M = 50.0f;
-static constexpr float POLOLU5472_ALARM_US = 1000.0f; // à calibrer selon le capteur
+static constexpr float POLOLU5472_ALARM_US = 65535.0f; // à calibrer selon le capteur
 static constexpr float TEMP_ALARM_C = 60.0f;
 static constexpr float CURRENT_ALARM_MA = 4000.0f;
 

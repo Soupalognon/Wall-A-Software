@@ -2,7 +2,6 @@
 #define APP_TASKS_SENSORMANAGER_H
 
 #include "Interfaces/ISensor.h"
-#include "Interfaces/ISensorSource.h"
 #include "Interfaces/IBus.h"
 #include "Config.h"
 #include <FreeRTOS.h>
@@ -39,7 +38,6 @@ public:
 	static const char* sensorNames[Config::MAX_SENSORS];
 
 	struct SensorGroup {
-		ISensorSource *source;
 		ISensor **sensors;
 		uint8_t sensorCount;
 		uint32_t periodMs;

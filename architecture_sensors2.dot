@@ -1,0 +1,65 @@
+// Dependency graph — Capteurs ADC (Adc + ISensor)
+// Rendu : dot -Tsvg architecture_sensors2.dot -o architecture_sensors2.svg
+//         dot -Tpng architecture_sensors2.dot -o architecture_sensors2.png
+
+digraph SensorArchitecture {
+    rankdir=BT;
+    splines=ortho;
+    node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10];
+    edge  [fontname="Helvetica", fontsize=8];
+
+    // ── Interfaces ───────────────────────────────────────────────
+    node [fillcolor="#E3F2FD"];
+    IAdcHAL  [label="IAdcHAL\n«interface»"];
+    ISensor  [label="ISensor\n«interface»"];
+    IBus     [label="IBus\n«interface»"];
+
+    // ── Driver de base ───────────────────────────────────────────
+    node [fillcolor="#FFF3E0"];
+    Adc      [label="Adc\n(driver ADC + registre statique)"];
+
+    // ── Capteurs concrets ────────────────────────────────────────
+    node [fillcolor="#E8F5E9"];
+    InternalTemperature  [label="InternalTemperature\n(hadc3 · °C)"];
+    MotorCurrentSense    [label="MotorCurrentSense\n(hadc1 · mA)"];
+    B5WLB2101            [label="B5WLB2101\n(hadc2 · V)"];
+    ProximeterPololu5472 [label="ProximeterPololu5472\n(htim3 · µs · planifié)", style="rounded,filled,dashed", fillcolor="#F5F5F5"];
+
+    // ── Orchestration / appelant ─────────────────────────────────
+    node [fillcolor="#F3E5F5"];
+    SensorManager [label="SensorManager\n(task · SensorGroup)"];
+    cppMain       [label="cppMain\n(câblage des instances)"];
+
+    // ── Dépendances externes ─────────────────────────────────────
+    node [fillcolor="#ECEFF1", shape=box, style="filled"];
+    mathlib  [label="math (logf)"];
+    Config   [label="Config"];
+
+    // ── Réalisations d'interface (héritage) ──────────────────────
+    edge [arrowhead=onormal, color="#1565C0"];
+    Adc                  -> IAdcHAL;
+    InternalTemperature  -> Adc;
+    InternalTemperature  -> ISensor;
+    MotorCurrentSense    -> Adc;
+    MotorCurrentSense    -> ISensor;
+    B5WLB2101            -> Adc;
+    B5WLB2101            -> ISensor;
+
+    // ── Dépendances d'usage (include / appel) ────────────────────
+    edge [arrowhead=vee, style=dashed, color="#616161"];
+    InternalTemperature  -> mathlib   [label="logf"];
+
+    SensorManager        -> ISensor   [label="groupes ISensor*[]"];
+    SensorManager        -> IBus;
+    SensorManager        -> Config;
+
+    cppMain              -> SensorManager;
+    cppMain              -> InternalTemperature;
+    cppMain              -> MotorCurrentSense;
+    cppMain              -> B5WLB2101;
+
+    // ── Capteur planifié ─────────────────────────────────────────
+    edge [style=dotted, color="#9E9E9E"];
+    ProximeterPololu5472 -> ISensor;
+    ProximeterPololu5472 -> Adc;
+}

@@ -1,11 +1,20 @@
-# Architecture — InternalTemperature2
+# Architecture — Capteurs ADC (Adc + ISensor)
+
+Trois capteurs analogiques partagent la même base : le driver `Adc` (acquisition non-bloquante par interruption) et l'interface `ISensor` (contrat capteur). Chaque capteur fusionne les deux par double héritage `public Adc, public ISensor`.
+
+| Capteur | Périphérique | Conversion | Unité |
+|---|---|---|---|
+| `InternalTemperature` | `hadc3` (3 canaux) | NTC → Steinhart–Hart | °C |
+| `MotorCurrentSense` | `hadc1` (4 canaux) | pont shunt (primaire/secondaire) | mA |
+| `B5WLB2101` | `hadc2` (4 canaux) | tension brute | V |
+| `ProximeterPololu5472` | `htim3` InputCapture | *(planifié, commenté)* | µs |
 
 ```mermaid
 classDiagram
     direction TB
 
     %% ── Interfaces ──────────────────────────────────────────────────────────
-    class ISensor2 {
+    class ISensor {
         <<interface>>
         +id() uint8_t
         +name() const char*
@@ -14,122 +23,152 @@ classDiagram
         +bind()
         +trigger()
         +doneFlag() uint32_t
+        +isActive() bool
     }
 
-    %% ── Driver Adc (base class) ─────────────────────────────────────────────
+    class IAdcHAL {
+        <<interface>>
+        +start()
+        +rawValue() uint16_t
+        +isActive() bool
+    }
+
+    %% ── Driver Adc (base commune) ───────────────────────────────────────────
     class Adc {
-        <<abstract>>
         #_doneFlag uint32_t
         #_notifyThreadId TaskHandle_t
         -_hadc ADC_HandleTypeDef*
         -_sConfig ADC_ChannelConfTypeDef
         -_rawValue uint16_t
         -_isActive bool
+        -s_head Adc*$
+        -_next Adc*
         +getInstance() ADC_HandleTypeDef*
         +onConversionComplete()
         +isActive() bool
+        +rawValue() uint16_t
+        +start()
+        +dispatchCallback(hadc)$
         #Adc(hadc, channel, doneFlag)
-        #rawValue() uint16_t
-        #start()
     }
 
-    %% ── InternalTemperature2 ────────────────────────────────────────────────
-    class InternalTemperature2 {
-        +channelEnum PRIMARY_MOTOR=0 / SECONDARY_MOTOR=1 / POWER_SUPPLIES=2
-        -_rawBuf uint16_t[3]
-        -_id uint8_t
-        -_name const char*
-        -_alarmThreshold float
-        -_lastValue float
-        -_periodWindowMs uint32_t
-        -_riseTime uint32_t
-        -_wasAbove bool
+    IAdcHAL <|.. Adc
+
+    %% ── Capteurs concrets ───────────────────────────────────────────────────
+    class InternalTemperature {
+        +channelEnum PRIMARY_MOTOR / SECONDARY_MOTOR / POWER_SUPPLIES
+        -_id / _name / _alarmThreshold
+        -_lastValue / _periodWindowMs / _riseTime / _wasAbove
         -RESISTANCE_REFERENCE = 10000
         -B_REFERENCE = 3434.0f
         -TEMPERATURE_REFERENCE = 25
-        +id() uint8_t
-        +name() const char*
-        +read() float
-        +isAlarm() bool
-        +bind()
-        +trigger()
-        +doneFlag() uint32_t
-        -voltageToCelsius(adcVal uint16_t) float
+        -voltageToCelsius(adcVal) float
     }
 
-    Adc       <|-- InternalTemperature2
-    ISensor2  <|.. InternalTemperature2
-
-    %% ── Dépendances externes ─────────────────────────────────────────────────
-    class HAL {
-        <<extern>>
-        +ADC_ConfigChannel()
-        +ADC_Start_IT()
-        +ADC_GetValue() uint32_t
-        +GetTick() uint32_t
+    class MotorCurrentSense {
+        +channelEnum PRIMARY_MOTOR_LEFT/RIGHT / SECONDARY_MOTOR_LEFT/RIGHT
+        -_isPrimaryMotor bool
+        -PRI_RESISTANCE_REFERENCE / PRI_GAIN_FACTOR / SEC_RESISTANCE_REFERENCE
+        -voltageToCurrentPrimary(adcVal) float
+        -voltageToCurrentSecondary(adcVal) float
     }
 
-    class FreeRTOS {
-        <<extern>>
-        +xTaskGetCurrentTaskHandle() TaskHandle_t
-        +xTaskNotifyFromISR(id, flag, eSetBits, &xHPTW)
-        +portYIELD_FROM_ISR(xHPTW)
+    class B5WLB2101 {
+        +channelEnum CH_1 / CH_2 / CH_3 / CH_4
+        -_id / _name / _alarmThreshold
+        -_lastValue / _periodWindowMs / _riseTime / _wasAbove
     }
 
-    class math {
-        <<extern stdlib>>
-        +logf(x) float
-    }
+    Adc      <|-- InternalTemperature
+    ISensor  <|.. InternalTemperature
+    Adc      <|-- MotorCurrentSense
+    ISensor  <|.. MotorCurrentSense
+    Adc      <|-- B5WLB2101
+    ISensor  <|.. B5WLB2101
 
-    Adc               ..> HAL      : ConfigChannel / Start_IT / GetValue
-    InternalTemperature2 ..> HAL   : GetTick (isAlarm)
-    InternalTemperature2 ..> FreeRTOS : xTaskGetCurrentTaskHandle (bind)\nxTaskNotifyFromISR (onConversionComplete)
-    InternalTemperature2 ..> math  : logf (voltageToCelsius)
+    %% ── Orchestration ───────────────────────────────────────────────────────
+    class SensorManager {
+        +SensorGroup : sensors, count, periodMs, nextDueMs
+        +task(param)$
+        +pollDueGroups()
+    }
+    SensorManager o-- ISensor : groupes (ISensor*[])
 ```
 
-## Flux acquisition → lecture
+## Routage des interruptions — registre intrusif statique
+
+Contrairement à la v1, le callback de fin de conversion n'est plus lié à une instance unique. Chaque `Adc` s'auto-enregistre dans une liste chaînée statique (`s_head` / `_next`) au constructeur. Le callback HAL global parcourt la liste et route l'IT vers l'instance active du `hadc` concerné.
+
+> Sur un même `hadc` les canaux sont séquentiels (un seul actif à la fois), mais **plusieurs `hadc` peuvent convertir en parallèle** ; la résolution se fait donc par la paire `(hadc, _isActive)`.
 
 ```mermaid
 sequenceDiagram
-    participant C  as Appelant (SensorManager ou task)
-    participant IT as InternalTemperature2
+    participant H as HAL / ISR
+    participant Reg as Adc::dispatchCallback (static)
+    participant A as Adc actif
+
+    H-->>Reg: HAL_ADC_ConvCpltCallback(hadc)
+    loop parcours s_head → _next
+        Reg->>Reg: a->_hadc == hadc && a->_isActive ?
+    end
+    Reg->>A: onConversionComplete()
+    A->>A: _rawValue = HAL_ADC_GetValue(hadc)
+    A->>A: xTaskNotifyFromISR(_notifyThreadId, _doneFlag)
+    A->>A: _isActive = false
+```
+
+## Flux acquisition → lecture (orchestré par SensorManager)
+
+```mermaid
+sequenceDiagram
+    participant SM as SensorManager (task)
+    participant S  as Capteur (ISensor)
     participant A  as Adc (base)
     participant H  as HAL / ISR
 
-    C->>IT: bind()
-    IT->>A: _notifyThreadId = xTaskGetCurrentTaskHandle()
+    Note over SM,S: au démarrage : bind() sur chaque capteur
+    SM->>S: bind()
+    S->>A: _notifyThreadId = xTaskGetCurrentTaskHandle()
 
-    C->>IT: trigger()
-    IT->>A: start()
-    A->>H: HAL_ADC_ConfigChannel() + HAL_ADC_Start_IT()
+    loop pollDueGroups() — groupe échu
+        SM->>S: trigger()
+        S->>A: start()
+        A->>H: HAL_ADC_ConfigChannel() + HAL_ADC_Start_IT()
 
-    H-->>A: HAL_ADC_ConvCpltCallback → onConversionComplete()
-    A->>A: _rawValue = HAL_ADC_GetValue()
-    A->>C: xTaskNotifyFromISR(_doneFlag)
+        SM->>SM: xTaskNotifyWait(doneFlag, portMAX_DELAY)
+        H-->>A: ConvCpltCallback → onConversionComplete()
+        A-->>SM: xTaskNotifyFromISR(_doneFlag) → réveille la task
 
-    C->>IT: read()
-    IT->>A: rawValue()
-    A-->>IT: _rawValue (uint16_t)
-    IT->>IT: voltageToCelsius(_rawValue) → °C
-    IT-->>C: float (température en °C)
+        SM->>S: read()
+        S->>A: rawValue()
+        A-->>S: _rawValue (uint16_t)
+        S->>S: conversion (°C / mA / V)
+        S-->>SM: float
+        SM->>S: isAlarm()
+        SM->>SM: latestSnapshot[id] = {value, timestamp, alarmMask}
+    end
 ```
 
+`SensorManager` regroupe les capteurs par fréquence (`SensorGroup`) et planifie chaque groupe via `nextDueMs`. Pour chaque capteur échu : `trigger()` → attente bloquante sur `doneFlag` (`xTaskNotifyWait`) → `read()` + `isAlarm()` → écriture dans `latestSnapshot`.
+
 ## Alarme — deux modes
+
+Logique portée par chaque capteur (et non plus par `Adc`). Mise à jour de l'état de seuil dans `read()`, décision dans `isAlarm()`.
 
 | `periodWindowMs` | Comportement `isAlarm()` |
 |---|---|
 | `0` (défaut) | Instantané : `_lastValue > _alarmThreshold` |
 | `> 0` | Temporel : alarme si `_wasAbove == true` **et** `HAL_GetTick() - _riseTime >= _periodWindowMs` |
 
-> **Note :** contrairement à `AnalogSensor` (architecture v1), `InternalTemperature2` fusionne le driver ADC et la logique capteur dans une seule classe via double héritage `Adc` + `ISensor2`. Il n'y a pas d'intermédiaire `IAnalogSource`.
+## Conversions
 
-## Conversion NTC (voltageToCelsius)
+### InternalTemperature — NTC (`voltageToCelsius`)
 
 ```
 adcVal (12 bits, 0–4095)
   └─► voltage = adcVal / 4096.0 × 3.3 V
         └─► R_ntc = voltage × R_ref / (3.3 − voltage)      (pont diviseur)
-              └─► T_K = 1 / (1/T_ref_K + ln(R_ntc/R_ref) / B)   (équation Steinhart–Hart simplifiée)
+              └─► T_K = 1 / (1/T_ref_K + ln(R_ntc/R_ref) / B)   (Steinhart–Hart simplifié)
                     └─► T_°C = T_K − 273.15
 ```
 
@@ -138,3 +177,24 @@ adcVal (12 bits, 0–4095)
 | `RESISTANCE_REFERENCE` | 10 000 Ω |
 | `B_REFERENCE` | 3434 K |
 | `TEMPERATURE_REFERENCE` | 25 °C |
+
+### MotorCurrentSense — courant
+
+```
+Primaire   : I = (adcVal/4096 × 3.3 × 1000 / PRI_GAIN_FACTOR) / PRI_RESISTANCE_REFERENCE
+Secondaire : I = (adcVal/4096 × 3.3) / SEC_RESISTANCE_REFERENCE
+```
+
+| Constante | Valeur |
+|---|---|
+| `PRI_RESISTANCE_REFERENCE` | 3090 Ω |
+| `PRI_GAIN_FACTOR` | 0.000212 |
+| `SEC_RESISTANCE_REFERENCE` | 0.5 Ω |
+
+### B5WLB2101 — tension brute
+
+```
+V = adcVal / 4096.0 × 3.3 V
+```
+
+> **Note architecture :** par rapport à la v1 (`AnalogSensor` + `IAnalogSource`), les capteurs ADC fusionnent désormais driver et logique capteur dans une seule classe via double héritage `Adc` + `ISensor`. Le routage d'interruption passe par un registre intrusif statique (`Adc::dispatchCallback`) au lieu d'un pointeur d'instance unique. `ProximeterPololu5472` (InputCapture sur `htim3`) reste à intégrer — le squelette est présent mais commenté.

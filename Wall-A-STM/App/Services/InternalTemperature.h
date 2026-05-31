@@ -1,9 +1,9 @@
 #ifndef INTERNAL_TEMPERATURES_HPP_
 #define INTERNAL_TEMPERATURES_HPP_
 
-#include <Interfaces/ISensor.h>
 #include <cstdint>
 #include "Drivers/Adc.h"
+#include "Interfaces/ISensor.h"
 
 class InternalTemperature: public Adc, public ISensor {
 public:
@@ -11,8 +11,8 @@ public:
 		PRIMARY_MOTOR = 0, SECONDARY_MOTOR = 1, POWER_SUPPLIES = 2,
 	} channelEnum;
 
-	InternalTemperature(ADC_HandleTypeDef *hadc, channelEnum channel, uint32_t doneFlag,
-		uint8_t id, const char *name, float alarmThreshold, uint32_t periodWindowMs = 0);
+	InternalTemperature(ADC_HandleTypeDef *hadc, channelEnum channel, uint32_t doneFlag, uint8_t id,
+		const char *name, float alarmThreshold, uint32_t periodWindowMs = 0);
 	uint8_t id() const override;
 	const char* name() const override;
 	float read() override;
@@ -30,7 +30,6 @@ private:
 	static constexpr float B_REFERENCE = 3434.0f;
 	static constexpr uint8_t TEMPERATURE_REFERENCE = 25;
 
-	uint16_t _rawBuf[3] = { };
 	uint8_t _id;
 	const char *_name;
 	float _alarmThreshold;

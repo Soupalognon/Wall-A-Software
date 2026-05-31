@@ -5,14 +5,22 @@
 #include "stm32f4xx_hal.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "Interfaces/IAdcHAL.h"
 
-class Adc {
+class Adc : public IAdcHAL {
 public:
 	ADC_HandleTypeDef* getInstance();
 	void onConversionComplete();
-	bool isActive() const {
+
+	bool isActive() const override {
 		return _isActive;
 	}
+
+	uint16_t rawValue() override {
+		return _rawValue;
+	}
+
+	void start() override;
 
 	// Route une interruption de fin de conversion vers l'objet actif du périphérique
 	// concerné. Sur un même hadc les canaux sont séquentiels (un seul actif), mais
@@ -24,12 +32,6 @@ protected:
 	TaskHandle_t _notifyThreadId = nullptr;
 
 	Adc(ADC_HandleTypeDef *hadc, const uint32_t channel, uint32_t doneFlag);
-
-	uint16_t rawValue() {
-		return _rawValue;
-	}
-
-	void start();
 
 private:
 	ADC_HandleTypeDef *_hadc;

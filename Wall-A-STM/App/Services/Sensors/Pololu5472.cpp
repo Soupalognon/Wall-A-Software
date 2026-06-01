@@ -2,10 +2,9 @@
 #include <math.h>
 #include <Services/Sensors/Pololu5472.h>
 
-Pololu5472::Pololu5472(IInputCaptureHAL &ic, uint8_t id,
-	const char *name, float alarmThreshold, uint32_t periodWindowMs) :
-	_ic(ic), _id(id), _name(name), _alarmThreshold(alarmThreshold), _periodWindowMs(
-		periodWindowMs) {
+Pololu5472::Pololu5472(IInputCaptureHAL &ic, uint8_t id, const char *name, float alarmThreshold,
+	uint32_t periodWindowMs) :
+	_ic(ic), _id(id), _name(name), _alarmThreshold(alarmThreshold), _periodWindowMs(periodWindowMs) {
 }
 
 void Pololu5472::bind() {
@@ -19,7 +18,7 @@ uint32_t Pololu5472::doneFlag() const {
 }
 
 float Pololu5472::read() {
-	if(!_ic.hasNewPulse())
+	if (!_ic.hasNewPulse())
 		return std::nanf("");
 
 	_lastValue = static_cast<float>(_ic.getLastPulse());

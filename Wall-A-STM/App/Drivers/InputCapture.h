@@ -6,7 +6,7 @@
 #include "stm32f4xx_hal.h"
 #include "Interfaces/IInputCaptureHAL.h"
 
-class InputCapture : public IInputCaptureHAL {
+class InputCapture: public IInputCaptureHAL {
 public:
 	InputCapture(TIM_HandleTypeDef *htim, uint32_t channel);
 
@@ -29,10 +29,10 @@ private:
 	uint32_t _channel;                       // TIM_CHANNEL_x : Start_IT / ReadCapturedValue
 	HAL_TIM_ActiveChannel _activeChannel;    // HAL_TIM_ACTIVE_CHANNEL_x : matching dispatch
 
-	uint32_t _riseTime    = 0;
-	uint32_t _pulseWidth  = 0;
-	bool     _firstCaptured = false;
-	bool     _hasNew        = false;
+	uint32_t _riseTime = 0;
+	uint32_t _pulseWidth = 0;
+	bool _firstCaptured = false;
+	bool _hasNew = false;
 
 	void onCapture();
 

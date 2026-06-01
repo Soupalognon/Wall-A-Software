@@ -8,7 +8,10 @@
 
 class Drv8262: public IMotorHAL {
 public:
-	explicit Drv8262(TIM_HandleTypeDef *htim) : _htim(htim) {};
+	explicit Drv8262(TIM_HandleTypeDef *htim) :
+		_htim(htim) {
+	}
+	;
 
 	bool begin();
 	void setLeftDuty(float duty);

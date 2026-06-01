@@ -7,8 +7,8 @@
 
 class Pololu5472: public ISensor {
 public:
-	Pololu5472(IInputCaptureHAL &ic, uint8_t id, const char *name,
-		float alarmThreshold, uint32_t periodWindowMs = 0);
+	Pololu5472(IInputCaptureHAL &ic, uint8_t id, const char *name, float alarmThreshold,
+		uint32_t periodWindowMs = 0);
 	uint8_t id() const override;
 	const char* name() const override;
 	float read() override;

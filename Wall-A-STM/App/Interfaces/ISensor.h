@@ -10,7 +10,8 @@ public:
 	virtual float read() = 0;
 	virtual bool isAlarm() = 0;
 
-	virtual void bind() { }
+	virtual void bind() {
+	}
 	virtual void trigger() = 0;          // starts the acquisition (non-blocking)
 	virtual uint32_t doneFlag() const = 0; // ISR flag for xTaskNotifyFromISR (0 = no wait)
 	virtual bool isActive() const = 0;

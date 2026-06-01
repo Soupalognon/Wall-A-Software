@@ -35,7 +35,7 @@ public:
 		uint8_t count;
 	};
 	static SensorSnapshot latestSnapshot;
-	static const char* sensorNames[Config::MAX_SENSORS];
+	static const char *sensorNames[Config::MAX_SENSORS];
 
 	struct SensorGroup {
 		ISensor **sensors;

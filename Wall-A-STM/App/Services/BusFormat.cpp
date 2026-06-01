@@ -82,7 +82,8 @@ const char* BusFormat::altSensorAlarm(uint32_t timestamp, const char *sensorName
 const char* BusFormat::hltSensors(uint32_t timestamp, uint8_t count, uint32_t alarmMask) {
 	static char buf[64];
 
-	snprintf(buf, sizeof(buf), "HLT SENSORS time:%ld NUMBER:%d ALARM:0x%08lX\r\n", timestamp, count, alarmMask);
+	snprintf(buf, sizeof(buf), "HLT SENSORS time:%ld NUMBER:%d ALARM:0x%08lX\r\n", timestamp, count,
+		alarmMask);
 	return buf;
 }
 

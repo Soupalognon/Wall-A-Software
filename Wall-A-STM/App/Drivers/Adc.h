@@ -7,7 +7,7 @@
 #include "task.h"
 #include "Interfaces/IAdcHAL.h"
 
-class Adc : public IAdcHAL {
+class Adc: public IAdcHAL {
 public:
 	Adc(ADC_HandleTypeDef *hadc, const uint32_t channel);
 

@@ -58,7 +58,8 @@ void Monitoring::checkOnce() {
 //		_bus->publish(Topic::ALERT, BusFormat::altStale("SENSORS"));
 //	}
 
-	_bus->publish(Topic::HEALTH, BusFormat::hltSensors(now, sensorSnap.count, sensorSnap.alarmMask));
+	_bus->publish(Topic::HEALTH,
+		BusFormat::hltSensors(now, sensorSnap.count, sensorSnap.alarmMask));
 	for (uint8_t i = 0; i < Config::MAX_SENSORS; i++) {
 		if (sensorSnap.timestamps[i] == _lastSensorTs[i])
 			continue;
@@ -66,9 +67,11 @@ void Monitoring::checkOnce() {
 
 		if (sensorSnap.alarmMask & (1u << i)) {
 			_bus->publish(Topic::ALERT,
-				BusFormat::altSensorAlarm(sensorSnap.timestamps[i], SensorManager::sensorNames[i], sensorSnap.values[i]));
+				BusFormat::altSensorAlarm(sensorSnap.timestamps[i], SensorManager::sensorNames[i],
+					sensorSnap.values[i]));
 		}
 		_bus->publish(Topic::HEALTH,
-			BusFormat::hltSensorValue(sensorSnap.timestamps[i], SensorManager::sensorNames[i], sensorSnap.values[i]));
+			BusFormat::hltSensorValue(sensorSnap.timestamps[i], SensorManager::sensorNames[i],
+				sensorSnap.values[i]));
 	}
 }

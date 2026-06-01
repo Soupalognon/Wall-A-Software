@@ -1,5 +1,5 @@
 #include <math.h>
-#include <Services/InternalTemperature.h>
+#include <Services/Sensors/InternalTemperature.h>
 #include "stm32f4xx_hal.h"
 
 InternalTemperature::InternalTemperature(IAdcHAL &adc, uint8_t id, const char *name,

@@ -1,4 +1,4 @@
-#include "Services/B5WLB2101.h"
+#include "Services/Sensors/B5WLB2101.h"
 #include "stm32f4xx_hal.h"
 
 B5WLB2101::B5WLB2101(IAdcHAL &adc, uint8_t id, const char *name, float alarmThreshold,

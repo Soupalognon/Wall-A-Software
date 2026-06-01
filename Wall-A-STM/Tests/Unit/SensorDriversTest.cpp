@@ -2,10 +2,10 @@
 #include "Stubs/HalStub.h"
 #include "Mocks/FakeAdcHAL.h"
 #include "Mocks/FakeInputCaptureHAL.h"
-#include "Services/B5WLB2101.h"
-#include "Services/MotorCurrentSense.h"
-#include "Services/InternalTemperature.h"
-#include "Services/ProximeterPololu5472.h"
+#include "Services/Sensors/B5WLB2101.h"
+#include "Services/Sensors/MotorCurrentSense.h"
+#include "Services/Sensors/InternalTemperature.h"
+#include "Services/Sensors/Pololu5472.h"
 
 // Au quart d'échelle « pile au milieu » : raw=2048 → 2048/4096*3.3 = 1.65 V.
 // Cette valeur tombe sur des points propres dans les trois conversions.

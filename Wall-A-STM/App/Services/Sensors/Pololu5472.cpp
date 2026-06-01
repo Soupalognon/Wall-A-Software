@@ -1,6 +1,6 @@
 #include "stm32f4xx_hal.h"
 #include <math.h>
-#include <Services/Pololu5472.h>
+#include <Services/Sensors/Pololu5472.h>
 
 Pololu5472::Pololu5472(IInputCaptureHAL &ic, uint8_t id,
 	const char *name, float alarmThreshold, uint32_t periodWindowMs) :

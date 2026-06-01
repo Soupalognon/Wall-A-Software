@@ -1,4 +1,4 @@
-#include "Services/MotorCurrentSense.h"
+#include "Services/Sensors/MotorCurrentSense.h"
 #include "stm32f4xx_hal.h"
 
 MotorCurrentSense::MotorCurrentSense(IAdcHAL &adc, MotorType type, uint8_t id,

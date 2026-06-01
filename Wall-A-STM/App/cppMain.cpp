@@ -1,7 +1,6 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
-#include <Services/Pololu5472.h>
 #include <iterator>
 
 #include "Tasks/MotionPlanner.h"
@@ -19,9 +18,10 @@
 
 #include "Services/Odometry.h"
 #include "Services/ActuatorManager.h"
-#include "Services/MotorCurrentSense.h"
-#include "Services/B5WLB2101.h"
-#include "Services/InternalTemperature.h"
+#include "Services/Sensors/MotorCurrentSense.h"
+#include "Services/Sensors/B5WLB2101.h"
+#include "Services/Sensors/InternalTemperature.h"
+#include "Services/Sensors/Pololu5472.h"
 
 #include "Interfaces/IEncoderHAL.h"
 #include "Interfaces/IMotorHAL.h"
@@ -93,14 +93,10 @@ static InputCapture icPol1 { &htim3, TIM_CHANNEL_1 };
 static InputCapture icPol2 { &htim3, TIM_CHANNEL_3 };
 static InputCapture icPol3 { &htim3, TIM_CHANNEL_2 };
 static InputCapture icPol4 { &htim3, TIM_CHANNEL_4 };
-static Pololu5472 polCH1 { icPol1, SensorType::PololuProxCH1, "POL_CH1",
-	Config::POLOLU5472_ALARM_US };
-static Pololu5472 polCH2 { icPol2, SensorType::PololuProxCH2, "POL_CH2",
-	Config::POLOLU5472_ALARM_US };
-static Pololu5472 polCH3 { icPol3, SensorType::PololuProxCH3, "POL_CH3",
-	Config::POLOLU5472_ALARM_US };
-static Pololu5472 polCH4 { icPol4, SensorType::PololuProxCH4, "POL_CH4",
-	Config::POLOLU5472_ALARM_US };
+static Pololu5472 polCH1 { icPol1, SensorType::PololuProxCH1, "POL_CH1", Config::POLOLU5472_ALARM_US };
+static Pololu5472 polCH2 { icPol2, SensorType::PololuProxCH2, "POL_CH2", Config::POLOLU5472_ALARM_US };
+static Pololu5472 polCH3 { icPol3, SensorType::PololuProxCH3, "POL_CH3", Config::POLOLU5472_ALARM_US };
+static Pololu5472 polCH4 { icPol4, SensorType::PololuProxCH4, "POL_CH4", Config::POLOLU5472_ALARM_US };
 
 // ---- Sensor groups (each at its own frequency) ------------------------------
 static ISensor *tempSensors[] = { &intTempPri, &intTempSec, &intTempPwr };
@@ -164,7 +160,7 @@ extern "C" void cppMain(void) {
 	createTask(SensorManager::task, "SensorMgr", Config::STACK_SENSOR_MANAGER, &sensorManager,
 		Config::PRIO_SENSOR_MANAGER, nullptr);
 
-	xTaskCreate(blinkTaskFn, "Blink", 1024, nullptr, 1, nullptr);
+	xTaskCreate(blinkTaskFn, "Blink", configMINIMAL_STACK_SIZE, nullptr, 1, nullptr);
 
 	ExternalComm::log_info("Program start");
 

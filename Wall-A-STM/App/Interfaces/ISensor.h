@@ -11,8 +11,8 @@ public:
 	virtual bool isAlarm() = 0;
 
 	virtual void bind() { }
-	virtual void trigger() = 0;          // démarre l'acquisition (non-bloquant)
-	virtual uint32_t doneFlag() const = 0; // flag ISR pour xTaskNotifyFromISR (0 = pas d'attente)
+	virtual void trigger() = 0;          // starts the acquisition (non-blocking)
+	virtual uint32_t doneFlag() const = 0; // ISR flag for xTaskNotifyFromISR (0 = no wait)
 	virtual bool isActive() const = 0;
 
 	virtual ~ISensor() = default;

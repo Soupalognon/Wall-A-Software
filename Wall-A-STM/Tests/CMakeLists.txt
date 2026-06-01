@@ -116,7 +116,10 @@ target_link_libraries(MonitoringTest PRIVATE GTest::gtest_main)
 # ── SensorDriversTest ─────────────────────────────────────────────────────
 add_executable(SensorDriversTest
     Unit/SensorDriversTest.cpp
-    ${APP_DIR}/Services/AnalogSensor.cpp
+    ${APP_DIR}/Services/B5WLB2101.cpp
+    ${APP_DIR}/Services/MotorCurrentSense.cpp
+    ${APP_DIR}/Services/InternalTemperature.cpp
+    ${APP_DIR}/Services/ProximeterPololu5472.cpp
     Stubs/FreeRTOSStub.cpp
 )
 target_include_directories(SensorDriversTest PRIVATE ${COMMON_INCLUDES})

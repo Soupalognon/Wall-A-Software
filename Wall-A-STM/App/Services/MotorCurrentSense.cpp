@@ -1,33 +1,29 @@
 #include "Services/MotorCurrentSense.h"
+#include "stm32f4xx_hal.h"
 
-static constexpr uint32_t CHANNELS[] = {
-ADC_CHANNEL_3, ADC_CHANNEL_4, ADC_CHANNEL_6, ADC_CHANNEL_8 };
-
-MotorCurrentSense::MotorCurrentSense(ADC_HandleTypeDef *hadc, channelEnum channel,
-	uint32_t doneFlag, uint8_t id, const char *name, float alarmThreshold, uint32_t periodWindowMs) :
-	Adc(hadc, CHANNELS[channel], doneFlag), _id(id), _name(name), _alarmThreshold(alarmThreshold), _periodWindowMs(
-		periodWindowMs) {
-	if (channel == channelEnum::PRIMARY_MOTOR_LEFT || channel == channelEnum::PRIMARY_MOTOR_RIGHT)
-		_isPrimaryMotor = true;
+MotorCurrentSense::MotorCurrentSense(IAdcHAL &adc, MotorType type, uint8_t id,
+	const char *name, float alarmThreshold, uint32_t periodWindowMs) :
+	_adc(adc), _id(id), _name(name), _alarmThreshold(alarmThreshold), _periodWindowMs(
+		periodWindowMs), _isPrimaryMotor(type == MotorType::PRIMARY) {
 }
 
 void MotorCurrentSense::bind() {
-	_notifyThreadId = xTaskGetCurrentTaskHandle();
+	_adc.bind(1u << _id); // _id == SensorType : bit de notif unique global
 }
 
 void MotorCurrentSense::trigger() {
-	start();
+	_adc.start();
 }
 
 uint32_t MotorCurrentSense::doneFlag() const {
-	return _doneFlag;
+	return _adc.doneFlag();
 }
 
 float MotorCurrentSense::read() {
 	if (_isPrimaryMotor)
-		_lastValue = voltageToCurrentPrimary(rawValue());
+		_lastValue = voltageToCurrentPrimary(_adc.rawValue());
 	else
-		_lastValue = voltageToCurrentSecondary(rawValue());
+		_lastValue = voltageToCurrentSecondary(_adc.rawValue());
 
 	if (_periodWindowMs > 0) {
 		bool above = _lastValue > _alarmThreshold;

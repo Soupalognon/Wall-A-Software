@@ -12,7 +12,7 @@ void Monitoring::task(void *param) {
 
 	ExternalComm::log_info("Monitoring: Init OK");
 	for (;;) {
-		vTaskDelay(pdMS_TO_TICKS(1000 / Config::MONITORING_FREQ_HZ));
+		vTaskDelay(pdMS_TO_TICKS(1000 / Config::TASK_MONITORING_FREQ_HZ));
 		self->checkOnce();
 	}
 }
@@ -20,7 +20,7 @@ void Monitoring::task(void *param) {
 void Monitoring::checkOnce() {
 	uint32_t now;
 
-	//─────────────────────────────────────────────────────────────────
+	//-----------------------------------------------------------------
 	now = HAL_GetTick();
 	OdoControl::OdoSnapshot odoSnap;
 	taskENTER_CRITICAL();
@@ -42,7 +42,7 @@ void Monitoring::checkOnce() {
 	_bus->publish(Topic::TELEMETRY,
 		BusFormat::telOdoMotorVoltage(now, odoSnap.voltLeft, odoSnap.voltRight));
 
-	//─────────────────────────────────────────────────────────────────
+	//-----------------------------------------------------------------
 	now = HAL_GetTick();
 	SensorManager::SensorSnapshot sensorSnap;
 	taskENTER_CRITICAL();

@@ -1,5 +1,5 @@
-#ifndef DRIVERS_ADC_H_
-#define DRIVERS_ADC_H_
+#ifndef APP_DRIVERS_ADC_H
+#define APP_DRIVERS_ADC_H
 
 #include <cstdint>
 #include "stm32f4xx_hal.h"
@@ -9,8 +9,11 @@
 
 class Adc : public IAdcHAL {
 public:
-	ADC_HandleTypeDef* getInstance();
+	Adc(ADC_HandleTypeDef *hadc, const uint32_t channel);
+
 	void onConversionComplete();
+
+	void bind(uint32_t doneFlag) override;
 
 	bool isActive() const override {
 		return _isActive;
@@ -20,30 +23,31 @@ public:
 		return _rawValue;
 	}
 
+	uint32_t doneFlag() const override {
+		return _doneFlag;
+	}
+
 	void start() override;
 
-	// Route une interruption de fin de conversion vers l'objet actif du périphérique
-	// concerné. Sur un même hadc les canaux sont séquentiels (un seul actif), mais
-	// plusieurs hadc peuvent converser en parallèle, d'où la résolution par (hadc, _isActive).
+	// Routes an end-of-conversion interrupt to the active object of the relevant
+	// peripheral. On a single hadc the channels are sequential (only one active), but
+	// several hadc can convert in parallel, hence the resolution by (hadc, _isActive).
 	static void dispatchCallback(ADC_HandleTypeDef *hadc);
 
-protected:
-	uint32_t _doneFlag;
+private:
+	uint32_t _doneFlag = 0;
 	TaskHandle_t _notifyThreadId = nullptr;
 
-	Adc(ADC_HandleTypeDef *hadc, const uint32_t channel, uint32_t doneFlag);
-
-private:
 	ADC_HandleTypeDef *_hadc;
 
 	ADC_ChannelConfTypeDef _sConfig = { };
 	uint16_t _rawValue;
 	bool _isActive = false;
 
-	// Registre intrusif de toutes les instances (auto-enregistrement au constructeur)
+	// Intrusive registry of all instances (self-registration in the constructor)
 	static Adc *s_head;
 	Adc *_next = nullptr;
 
 };
 
-#endif /* DRIVERS_ADC_H_ */
+#endif /* APP_DRIVERS_ADC_H */

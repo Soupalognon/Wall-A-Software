@@ -1,28 +1,27 @@
 #include <math.h>
 #include <Services/InternalTemperature.h>
+#include "stm32f4xx_hal.h"
 
-static constexpr uint32_t CHANNELS[] = { ADC_CHANNEL_4, ADC_CHANNEL_5, ADC_CHANNEL_6 };
-
-InternalTemperature::InternalTemperature(ADC_HandleTypeDef *hadc, channelEnum channel,
-	uint32_t doneFlag, uint8_t id, const char *name, float alarmThreshold, uint32_t periodWindowMs) :
-	Adc(hadc, CHANNELS[channel], doneFlag), _id(id), _name(name), _alarmThreshold(alarmThreshold), _periodWindowMs(
+InternalTemperature::InternalTemperature(IAdcHAL &adc, uint8_t id, const char *name,
+	float alarmThreshold, uint32_t periodWindowMs) :
+	_adc(adc), _id(id), _name(name), _alarmThreshold(alarmThreshold), _periodWindowMs(
 		periodWindowMs) {
 }
 
 void InternalTemperature::bind() {
-	_notifyThreadId = xTaskGetCurrentTaskHandle();
+	_adc.bind(1u << _id); // _id == SensorType : bit de notif unique global
 }
 
 void InternalTemperature::trigger() {
-	start();
+	_adc.start();
 }
 
 uint32_t InternalTemperature::doneFlag() const {
-	return _doneFlag;
+	return _adc.doneFlag();
 }
 
 float InternalTemperature::read() {
-	_lastValue = voltageToCelsius(rawValue());
+	_lastValue = voltageToCelsius(_adc.rawValue());
 
 	if (_periodWindowMs > 0) {
 		bool above = _lastValue > _alarmThreshold;

@@ -124,6 +124,9 @@ robot-cdr/Tests/
 
 ### Compilation et exécution
 
+Tester les NFR
+`& "D:\msys64\usr\bin\bash.exe" -l "D:\_Programs\STM32\Wall-A-Software\Wall-A-STM\nfr-check.sh"`
+
 #### Étape 1 — Configurer le projet CMake
 
 Ouvrir **PowerShell** (ou CMD) et exécuter :

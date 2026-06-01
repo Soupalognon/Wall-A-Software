@@ -31,9 +31,9 @@ void UsbCdcChannel::_pumpTx() {
 	}
 	_txBusy = true;
 	if (CDC_Transmit_FS(_txStagingBuf, (uint16_t) len) == USBD_OK) {
-		_txTail = tail;  // avance seulement si le transfert a démarré
+		_txTail = tail;  // advance only if the transfer started
 	} else {
-		_txBusy = false; // permet un retry au prochain transmit()
+		_txBusy = false; // allow a retry on the next transmit()
 	}
 }
 

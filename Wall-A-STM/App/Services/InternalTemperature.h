@@ -1,18 +1,14 @@
-#ifndef INTERNAL_TEMPERATURES_HPP_
-#define INTERNAL_TEMPERATURES_HPP_
+#ifndef APP_SERVICES_INTERNALTEMPERATURE_H
+#define APP_SERVICES_INTERNALTEMPERATURE_H
 
 #include <cstdint>
-#include "Drivers/Adc.h"
+#include "Interfaces/IAdcHAL.h"
 #include "Interfaces/ISensor.h"
 
-class InternalTemperature: public Adc, public ISensor {
+class InternalTemperature: public ISensor {
 public:
-	typedef enum {
-		PRIMARY_MOTOR = 0, SECONDARY_MOTOR = 1, POWER_SUPPLIES = 2,
-	} channelEnum;
-
-	InternalTemperature(ADC_HandleTypeDef *hadc, channelEnum channel, uint32_t doneFlag, uint8_t id,
-		const char *name, float alarmThreshold, uint32_t periodWindowMs = 0);
+	InternalTemperature(IAdcHAL &adc, uint8_t id, const char *name, float alarmThreshold,
+		uint32_t periodWindowMs = 0);
 	uint8_t id() const override;
 	const char* name() const override;
 	float read() override;
@@ -22,7 +18,7 @@ public:
 	void trigger() override;
 	uint32_t doneFlag() const override;
 	bool isActive() const override {
-		return Adc::isActive();
+		return _adc.isActive();
 	}
 
 private:
@@ -30,6 +26,7 @@ private:
 	static constexpr float B_REFERENCE = 3434.0f;
 	static constexpr uint8_t TEMPERATURE_REFERENCE = 25;
 
+	IAdcHAL &_adc;
 	uint8_t _id;
 	const char *_name;
 	float _alarmThreshold;
@@ -42,4 +39,4 @@ private:
 	float voltageToCelsius(uint16_t adcVal);
 };
 
-#endif /* INTERNAL_TEMPERATURES_HPP_ */
+#endif /* APP_SERVICES_INTERNALTEMPERATURE_H */

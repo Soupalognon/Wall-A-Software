@@ -1,14 +1,14 @@
-#ifndef APP_SERVICES_B5WLB2101_H
-#define APP_SERVICES_B5WLB2101_H
+#ifndef APP_SERVICES_PROXIMETERPOLOLU5472_H
+#define APP_SERVICES_PROXIMETERPOLOLU5472_H
 
 #include <cstdint>
-#include "Interfaces/IAdcHAL.h"
+#include "Interfaces/IInputCaptureHAL.h"
 #include "Interfaces/ISensor.h"
 
-class B5WLB2101: public ISensor {
+class Pololu5472: public ISensor {
 public:
-	B5WLB2101(IAdcHAL &adc, uint8_t id, const char *name, float alarmThreshold,
-		uint32_t periodWindowMs = 0);
+	Pololu5472(IInputCaptureHAL &ic, uint8_t id, const char *name,
+		float alarmThreshold, uint32_t periodWindowMs = 0);
 	uint8_t id() const override;
 	const char* name() const override;
 	float read() override;
@@ -18,11 +18,11 @@ public:
 	void trigger() override;
 	uint32_t doneFlag() const override;
 	bool isActive() const override {
-		return _adc.isActive();
+		return false;
 	}
 
 private:
-	IAdcHAL &_adc;
+	IInputCaptureHAL &_ic;
 	uint8_t _id;
 	const char *_name;
 	float _alarmThreshold;
@@ -33,4 +33,4 @@ private:
 	bool _wasAbove = false;
 };
 
-#endif // APP_SERVICES_B5WLB2101_H
+#endif // APP_SERVICES_PROXIMETERPOLOLU5472_H

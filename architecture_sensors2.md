@@ -1,13 +1,24 @@
-# Architecture — Capteurs ADC (Adc + ISensor)
+# Architecture — Capteurs (ADC + InputCapture, sous `ISensor`)
 
-Trois capteurs analogiques partagent la même base : le driver `Adc` (acquisition non-bloquante par interruption) et l'interface `ISensor` (contrat capteur). Chaque capteur fusionne les deux par double héritage `public Adc, public ISensor`.
+Tous les capteurs **réalisent** `ISensor` (héritage) et **détiennent** une abstraction HAL injectée (composition) — `IAdcHAL&` pour les capteurs analogiques, `IInputCaptureHAL&` pour le Pololu. Le capteur délègue l'acquisition à l'abstraction sans connaître le driver concret (`Adc` / `InputCapture`). Les drivers sont construits et injectés dans `cppMain` (composition root), un par capteur/canal, ce qui rend chaque capteur testable en hôte avec un faux HAL (`FakeAdcHAL` / `FakeInputCaptureHAL`, cf. `SensorDriversTest`).
 
-| Capteur | Périphérique | Conversion | Unité |
-|---|---|---|---|
-| `InternalTemperature` | `hadc3` (3 canaux) | NTC → Steinhart–Hart | °C |
-| `MotorCurrentSense` | `hadc1` (4 canaux) | pont shunt (primaire/secondaire) | mA |
-| `B5WLB2101` | `hadc2` (4 canaux) | tension brute | V |
-| `ProximeterPololu5472` | `htim3` InputCapture | *(planifié, commenté)* | µs |
+| Capteur | Périphérique | Acquisition | Conversion | Unité |
+|---|---|---|---|---|
+| `InternalTemperature` | `hadc3` (canaux 4/5/6) | ADC IT, bloquant | NTC → Steinhart–Hart | °C |
+| `MotorCurrentSense` | `hadc1` (canaux 3/4/6/8) | ADC IT, bloquant | pont shunt (primaire/secondaire) | mA |
+| `B5WLB2101` | `hadc2` (canaux 12/10/13/9) | ADC IT, bloquant | tension brute | V |
+| `ProximeterPololu5472` | `htim3` (canaux 1/2/3/4) | InputCapture IT, passif | largeur d'impulsion brute | µs |
+
+## Deux paradigmes d'acquisition sous `ISensor`
+
+`SensorManager` orchestre les deux de façon uniforme via `trigger()` → attente sur `doneFlag()` → `read()`. La différence tient au `doneFlag()` :
+
+| | Capteurs ADC | `ProximeterPololu5472` (InputCapture) |
+|---|---|---|
+| `trigger()` | `start()` : lance une conversion non-bloquante | **no-op** (le timer capture en continu) |
+| `doneFlag()` | `1 << id` → `SensorManager` attend la notif ISR | **`0`** → aucune attente, lecture immédiate |
+| `read()` | convertit `rawValue()` (valeur toujours fraîche) | renvoie `getLastPulse()`, ou **`NaN`** si pas de nouvelle impulsion (`hasNewPulse() == false`) |
+| Modèle | déclenché à la demande, **bloquant** sur flag de notif | **libre / piloté par l'ISR**, lecture polling non-bloquante |
 
 ```mermaid
 classDiagram
@@ -28,35 +39,63 @@ classDiagram
 
     class IAdcHAL {
         <<interface>>
+        +bind(doneFlag)
         +start()
         +rawValue() uint16_t
         +isActive() bool
+        +doneFlag() uint32_t
     }
 
-    %% ── Driver Adc (base commune) ───────────────────────────────────────────
+    class IInputCaptureHAL {
+        <<interface>>
+        +init() bool
+        +getLastPulse() uint32_t
+        +hasNewPulse() bool
+    }
+
+    %% ── Drivers ─────────────────────────────────────────────────────────────
     class Adc {
-        #_doneFlag uint32_t
-        #_notifyThreadId TaskHandle_t
+        -_doneFlag uint32_t
+        -_notifyThreadId TaskHandle_t
         -_hadc ADC_HandleTypeDef*
         -_sConfig ADC_ChannelConfTypeDef
         -_rawValue uint16_t
         -_isActive bool
         -s_head Adc*$
         -_next Adc*
-        +getInstance() ADC_HandleTypeDef*
+        +Adc(hadc, channel)
         +onConversionComplete()
+        +bind(doneFlag)
         +isActive() bool
         +rawValue() uint16_t
+        +doneFlag() uint32_t
         +start()
         +dispatchCallback(hadc)$
-        #Adc(hadc, channel, doneFlag)
     }
 
-    IAdcHAL <|.. Adc
+    class InputCapture {
+        -_htim TIM_HandleTypeDef*
+        -_channel uint32_t
+        -_activeChannel HAL_TIM_ActiveChannel
+        -_riseTime / _pulseWidth uint32_t
+        -_firstCaptured / _hasNew bool
+        -s_head InputCapture*$
+        -_next InputCapture*
+        +InputCapture(htim, channel)
+        +init() bool
+        +getLastPulse() uint32_t
+        +hasNewPulse() bool
+        -onCapture()
+        +dispatchCallback(htim)$
+        +initAll()$ bool
+    }
+
+    IAdcHAL          <|.. Adc
+    IInputCaptureHAL <|.. InputCapture
 
     %% ── Capteurs concrets ───────────────────────────────────────────────────
     class InternalTemperature {
-        +channelEnum PRIMARY_MOTOR / SECONDARY_MOTOR / POWER_SUPPLIES
+        -_adc IAdcHAL&
         -_id / _name / _alarmThreshold
         -_lastValue / _periodWindowMs / _riseTime / _wasAbove
         -RESISTANCE_REFERENCE = 10000
@@ -66,7 +105,8 @@ classDiagram
     }
 
     class MotorCurrentSense {
-        +channelEnum PRIMARY_MOTOR_LEFT/RIGHT / SECONDARY_MOTOR_LEFT/RIGHT
+        +MotorType PRIMARY / SECONDARY
+        -_adc IAdcHAL&
         -_isPrimaryMotor bool
         -PRI_RESISTANCE_REFERENCE / PRI_GAIN_FACTOR / SEC_RESISTANCE_REFERENCE
         -voltageToCurrentPrimary(adcVal) float
@@ -74,17 +114,25 @@ classDiagram
     }
 
     class B5WLB2101 {
-        +channelEnum CH_1 / CH_2 / CH_3 / CH_4
+        -_adc IAdcHAL&
         -_id / _name / _alarmThreshold
         -_lastValue / _periodWindowMs / _riseTime / _wasAbove
     }
 
-    Adc      <|-- InternalTemperature
+    class ProximeterPololu5472 {
+        -_ic IInputCaptureHAL&
+        -_id / _name / _alarmThreshold
+        -_lastValue / _periodWindowMs / _riseTime / _wasAbove
+    }
+
     ISensor  <|.. InternalTemperature
-    Adc      <|-- MotorCurrentSense
+    IAdcHAL  o-- InternalTemperature
     ISensor  <|.. MotorCurrentSense
-    Adc      <|-- B5WLB2101
+    IAdcHAL  o-- MotorCurrentSense
     ISensor  <|.. B5WLB2101
+    IAdcHAL  o-- B5WLB2101
+    ISensor          <|.. ProximeterPololu5472
+    IInputCaptureHAL o-- ProximeterPololu5472
 
     %% ── Orchestration ───────────────────────────────────────────────────────
     class SensorManager {
@@ -97,24 +145,29 @@ classDiagram
 
 ## Routage des interruptions — registre intrusif statique
 
-Contrairement à la v1, le callback de fin de conversion n'est plus lié à une instance unique. Chaque `Adc` s'auto-enregistre dans une liste chaînée statique (`s_head` / `_next`) au constructeur. Le callback HAL global parcourt la liste et route l'IT vers l'instance active du `hadc` concerné.
+Les deux drivers partagent le même schéma : chaque instance s'auto-enregistre dans une liste chaînée statique (`s_head` / `_next`) au constructeur, et le callback HAL global parcourt la liste pour router l'IT vers la bonne instance.
 
-> Sur un même `hadc` les canaux sont séquentiels (un seul actif à la fois), mais **plusieurs `hadc` peuvent convertir en parallèle** ; la résolution se fait donc par la paire `(hadc, _isActive)`.
+| | `Adc::dispatchCallback(hadc)` | `InputCapture::dispatchCallback(htim)` |
+|---|---|---|
+| Callback HAL | `HAL_ADC_ConvCpltCallback` | `HAL_TIM_IC_CaptureCallback` |
+| Critère de résolution | `_hadc == hadc && _isActive` | `_htim == htim && htim->Channel == _activeChannel` |
+| Pourquoi | sur un `hadc` les canaux sont séquentiels (un seul actif), mais plusieurs `hadc` convertissent en parallèle | sur un `htim` chaque canal est une instance distincte ; `htim->Channel` désigne le canal qui a capturé |
+
+> `InputCapture::initAll()` (appelé une fois depuis `cppMain`, après `MX_TIMx_Init`) parcourt la liste et démarre `HAL_TIM_IC_Start_IT` sur chaque instance.
 
 ```mermaid
 sequenceDiagram
     participant H as HAL / ISR
-    participant Reg as Adc::dispatchCallback (static)
-    participant A as Adc actif
+    participant Reg as dispatchCallback (static)
+    participant A as Instance active
 
-    H-->>Reg: HAL_ADC_ConvCpltCallback(hadc)
+    H-->>Reg: HAL_ADC_ConvCpltCallback(hadc) / HAL_TIM_IC_CaptureCallback(htim)
     loop parcours s_head → _next
-        Reg->>Reg: a->_hadc == hadc && a->_isActive ?
+        Reg->>Reg: critère de résolution (hadc,_isActive) / (htim,Channel)
     end
-    Reg->>A: onConversionComplete()
-    A->>A: _rawValue = HAL_ADC_GetValue(hadc)
-    A->>A: xTaskNotifyFromISR(_notifyThreadId, _doneFlag)
-    A->>A: _isActive = false
+    Reg->>A: onConversionComplete() / onCapture()
+    Note over A: ADC → _rawValue = HAL_ADC_GetValue, puis xTaskNotifyFromISR(_doneFlag), puis _isActive = false
+    Note over A: IC → calcule _pulseWidth (delta entre 2 fronts, gestion wrap 16-bit), puis _hasNew = true
 ```
 
 ## Flux acquisition → lecture (orchestré par SensorManager)
@@ -123,37 +176,40 @@ sequenceDiagram
 sequenceDiagram
     participant SM as SensorManager (task)
     participant S  as Capteur (ISensor)
-    participant A  as Adc (base)
+    participant D  as Driver (Adc / InputCapture)
     participant H  as HAL / ISR
 
-    Note over SM,S: au démarrage : bind() sur chaque capteur
+    Note over SM,S: au démarrage, bind() sur chaque capteur (no-op côté Pololu)
     SM->>S: bind()
-    S->>A: _notifyThreadId = xTaskGetCurrentTaskHandle()
+    S->>D: ADC → _adc.bind(flag) enregistre _notifyThreadId = task et _doneFlag = bit(id)
 
     loop pollDueGroups() — groupe échu
         SM->>S: trigger()
-        S->>A: start()
-        A->>H: HAL_ADC_ConfigChannel() + HAL_ADC_Start_IT()
+        S->>D: ADC → start(), soit HAL_ADC_ConfigChannel + HAL_ADC_Start_IT
+        Note over S,D: Pololu → trigger() no-op (capture continue en arrière-plan)
 
-        SM->>SM: xTaskNotifyWait(doneFlag, portMAX_DELAY)
-        H-->>A: ConvCpltCallback → onConversionComplete()
-        A-->>SM: xTaskNotifyFromISR(_doneFlag) → réveille la task
+        alt doneFlag() != 0 (ADC)
+            SM->>SM: xTaskNotifyWait(doneFlag, portMAX_DELAY)
+            H-->>D: ConvCpltCallback → onConversionComplete()
+            D-->>SM: xTaskNotifyFromISR(_doneFlag) → réveille la task
+        else doneFlag() == 0 (Pololu)
+            SM->>SM: aucune attente
+        end
 
         SM->>S: read()
-        S->>A: rawValue()
-        A-->>S: _rawValue (uint16_t)
-        S->>S: conversion (°C / mA / V)
-        S-->>SM: float
+        S->>D: ADC → rawValue(), Pololu → hasNewPulse() ? getLastPulse() sinon NaN
+        S->>S: conversion (°C / mA / V / µs)
+        S-->>SM: float (NaN si pas de nouvelle impulsion Pololu)
         SM->>S: isAlarm()
         SM->>SM: latestSnapshot[id] = {value, timestamp, alarmMask}
     end
 ```
 
-`SensorManager` regroupe les capteurs par fréquence (`SensorGroup`) et planifie chaque groupe via `nextDueMs`. Pour chaque capteur échu : `trigger()` → attente bloquante sur `doneFlag` (`xTaskNotifyWait`) → `read()` + `isAlarm()` → écriture dans `latestSnapshot`.
+`SensorManager` regroupe les capteurs par fréquence (`SensorGroup`) et planifie chaque groupe via `nextDueMs`. Pour chaque capteur échu : `trigger()` → attente conditionnelle sur `doneFlag` (`xTaskNotifyWait`, ignorée si `doneFlag()==0`) → `read()` + `isAlarm()` → écriture dans `latestSnapshot`. Les quatre groupes (température / courant / proximité B5W / Pololu) ont chacun leur propre fréquence (`Config::*_SENSOR_FREQ_HZ`).
 
 ## Alarme — deux modes
 
-Logique portée par chaque capteur (et non plus par `Adc`). Mise à jour de l'état de seuil dans `read()`, décision dans `isAlarm()`.
+Logique portée par chaque capteur. Mise à jour de l'état de seuil dans `read()`, décision dans `isAlarm()` (même mécanique pour ADC et Pololu).
 
 | `periodWindowMs` | Comportement `isAlarm()` |
 |---|---|
@@ -197,4 +253,14 @@ Secondaire : I = (adcVal/4096 × 3.3) / SEC_RESISTANCE_REFERENCE
 V = adcVal / 4096.0 × 3.3 V
 ```
 
-> **Note architecture :** par rapport à la v1 (`AnalogSensor` + `IAnalogSource`), les capteurs ADC fusionnent désormais driver et logique capteur dans une seule classe via double héritage `Adc` + `ISensor`. Le routage d'interruption passe par un registre intrusif statique (`Adc::dispatchCallback`) au lieu d'un pointeur d'instance unique. `ProximeterPololu5472` (InputCapture sur `htim3`) reste à intégrer — le squelette est présent mais commenté.
+### ProximeterPololu5472 — largeur d'impulsion
+
+Pas de conversion : la valeur brute du driver `InputCapture` est déjà en microsecondes.
+
+```
+µs = getLastPulse()      // delta entre front montant et front suivant
+                         // TIM3 16-bit, PSC = 83 @ 84 MHz → 1 tick = 1 µs
+                         // NaN si aucune nouvelle impulsion depuis le dernier read()
+```
+
+> **Note architecture :** chaque capteur réalise `ISensor` (héritage) et détient une abstraction HAL injectée (composition) — `IAdcHAL&` (ADC) ou `IInputCaptureHAL&` (Pololu). Il délègue l'acquisition à l'abstraction sans connaître le driver concret (`Adc` / `InputCapture`), tous deux instanciés et injectés dans `cppMain` (composition root), un par capteur/canal. Cette inversion de dépendance rend les capteurs testables en hôte avec un faux HAL (`FakeAdcHAL` / `FakeInputCaptureHAL`, cf. `SensorDriversTest`). Le routage d'interruption passe par un registre intrusif statique propre à chaque driver (`dispatchCallback`). `ProximeterPololu5472` est désormais pleinement intégré : passif (lecture polling non-bloquante, `doneFlag()==0`), il cohabite avec les capteurs ADC bloquants sous la même orchestration `SensorManager`.

@@ -25,7 +25,7 @@ void OdoControl::reset() {
 void OdoControl::task(void *param) {
 	auto *self = static_cast<OdoControl*>(param);
 	TickType_t lastWake = xTaskGetTickCount();
-	const uint32_t periodMs = 1000 / Config::ODO_FREQ_HZ;
+	const uint32_t periodMs = 1000 / Config::TASK_ODO_FREQ_HZ;
 	const TickType_t period = pdMS_TO_TICKS(periodMs);
 
 	if (self->_motor->begin() || self->_odom->begin()) {
@@ -135,7 +135,7 @@ void OdoControl::tickPose(Setpoint sp) {
 //	}
 
 	float rawErrAngle = atan2f(dy, dx) - _odom->getAngle();
-	float errAngle = atan2f(sinf(rawErrAngle), cosf(rawErrAngle));  // normalize to [-π, π]
+	float errAngle = atan2f(sinf(rawErrAngle), cosf(rawErrAngle));  // normalize to [-pi, pi]
 
 	float v = _pidSpeed.compute(errDist, dt);
 	float w = _pidAngle.compute(errAngle, dt);

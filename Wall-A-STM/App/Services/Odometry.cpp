@@ -16,7 +16,7 @@ bool Odometry::begin() {
 	if (_encR->init())
 		return 1;
 
-	HAL_TIM_Base_Start(&htim7);  // TIM7 : compteur 10 µs pour getDtFromTimer()
+	HAL_TIM_Base_Start(&htim7);  // TIM7: 10 us counter for getDtFromTimer()
 
 	return 0;
 }
@@ -27,9 +27,9 @@ uint32_t Odometry::getDtFromTimer() {
 
 void Odometry::update() {
 	uint32_t now_10us = getDtFromTimer();
-	// uint16_t subtraction : wrap correct même si CNT a débordé (overflow toutes les ~655 ms >> 5 ms)
+	// uint16_t subtraction: wrap correct even if CNT overflowed (overflow every ~655 ms >> 5 ms)
 	uint16_t diff = static_cast<uint16_t>(now_10us) - static_cast<uint16_t>(_lastMicros);
-	float dt = static_cast<float>(diff) * 1e-5f;  // 1 tick = 10 µs = 1e-5 s
+	float dt = static_cast<float>(diff) * 1e-5f;  // 1 tick = 10 us = 1e-5 s
 	_dt = (dt > 1e-4f) ? dt : 0.005f;
 	_lastMicros = now_10us;
 

@@ -1,29 +1,26 @@
 #include "Services/B5WLB2101.h"
+#include "stm32f4xx_hal.h"
 
-static constexpr uint32_t CHANNELS[] = {
-	ADC_CHANNEL_12, ADC_CHANNEL_10, ADC_CHANNEL_13, ADC_CHANNEL_9
-};
-
-B5WLB2101::B5WLB2101(ADC_HandleTypeDef *hadc, channelEnum channel,
-	uint32_t doneFlag, uint8_t id, const char *name, float alarmThreshold, uint32_t periodWindowMs) :
-	Adc(hadc, CHANNELS[channel], doneFlag), _id(id), _name(name), _alarmThreshold(alarmThreshold), _periodWindowMs(
+B5WLB2101::B5WLB2101(IAdcHAL &adc, uint8_t id, const char *name, float alarmThreshold,
+	uint32_t periodWindowMs) :
+	_adc(adc), _id(id), _name(name), _alarmThreshold(alarmThreshold), _periodWindowMs(
 		periodWindowMs) {
 }
 
 void B5WLB2101::bind() {
-	_notifyThreadId = xTaskGetCurrentTaskHandle();
+	_adc.bind(1u << _id); // _id == SensorType : bit de notif unique global
 }
 
 void B5WLB2101::trigger() {
-	start();
+	_adc.start();
 }
 
 uint32_t B5WLB2101::doneFlag() const {
-	return _doneFlag;
+	return _adc.doneFlag();
 }
 
 float B5WLB2101::read() {
-	_lastValue = (rawValue() / 4096.0f) * 3.3f;
+	_lastValue = (_adc.rawValue() / 4096.0f) * 3.3f;
 
 	if (_periodWindowMs > 0) {
 		bool above = _lastValue > _alarmThreshold;

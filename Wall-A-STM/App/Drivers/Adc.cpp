@@ -2,8 +2,8 @@
 
 Adc *Adc::s_head = nullptr;
 
-Adc::Adc(ADC_HandleTypeDef *hadc, const uint32_t channel, uint32_t doneFlag) :
-	_doneFlag(doneFlag), _hadc(hadc) {
+Adc::Adc(ADC_HandleTypeDef *hadc, const uint32_t channel) :
+	_hadc(hadc) {
 	_sConfig.Channel = channel;
 	_sConfig.Rank = 1;
 	_sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
@@ -12,10 +12,14 @@ Adc::Adc(ADC_HandleTypeDef *hadc, const uint32_t channel, uint32_t doneFlag) :
 	s_head = this;
 }
 
-void Adc::start() {
+void Adc::bind(uint32_t doneFlag) {
+	_notifyThreadId = xTaskGetCurrentTaskHandle();
+	_doneFlag = doneFlag;
+}
 
+void Adc::start() {
 	HAL_ADC_ConfigChannel(_hadc, &_sConfig);
-	_isActive = true;	// avant Start_IT : évite la course si l'IT arrive aussitôt
+	_isActive = true;	// before Start_IT: avoids the race if the IT fires immediately
 	HAL_ADC_Start_IT(_hadc);
 }
 
@@ -31,14 +35,10 @@ void Adc::onConversionComplete() {
 	_isActive = false;
 }
 
-ADC_HandleTypeDef* Adc::getInstance() {
-	return _hadc;
-}
-
 void Adc::dispatchCallback(ADC_HandleTypeDef *hadc) {
 	for (Adc *a = s_head; a != nullptr; a = a->_next) {
 		if (a->_hadc == hadc && a->_isActive) {
-			a->onConversionComplete();	// remet _isActive = false
+			a->onConversionComplete();	// resets _isActive = false
 			return;
 		}
 	}

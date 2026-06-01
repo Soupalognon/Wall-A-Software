@@ -92,7 +92,7 @@ void ExternalComm::publish(Topic topic, const char *payload) {
 		if (cfg.topic == topic) {
 			if (cfg.policy == QueuePolicy::OVERWRITE) {
 				TxEntry dummy;
-				xQueueReceive(q, &dummy, 0); // drain si pleine (xQueueOverwrite interdit sur queue set)
+				xQueueReceive(q, &dummy, 0); // drain if full (xQueueOverwrite forbidden on a queue set)
 				xQueueSend(q, &entry, 0);
 			} else {
 				xQueueSend(q, &entry, 0);

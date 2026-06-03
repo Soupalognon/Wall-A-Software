@@ -3,6 +3,7 @@ stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 lastStep: 8
 status: 'complete'
 completedAt: '2026-05-09'
+updatedAt: '2026-06-03'
 inputDocuments:
   - '_bmad-output/brainstorming/brainstorming-session-2026-05-09-1400.md'
 workflowType: 'architecture'
@@ -10,6 +11,8 @@ project_name: 'bmad - robot CDR'
 user_name: 'Gdurand'
 date: '2026-05-09'
 ---
+
+> **Note de mise à jour (2026-06-03) :** Ce document a été resynchronisé avec l'état réel du code. Changements majeurs depuis la version initiale : le câblage `SystemInit::boot()` est désormais réalisé par `App/cppMain.cpp` (objets statiques au scope fichier + fonction `cppMain()`) ; nouveau sous-système d'acquisition non-bloquant `Adc` (`IAdcHAL`) et `InputCapture` (`IInputCaptureHAL`) ; capteurs concrets regroupés sous `App/Services/Sensors/` ; `ActuatorManager` redevenu un Service (plus une tâche) ; `ICommChannel` déplacé dans `Interfaces/ICom.h` ; routage par canal des topics via `ComQueuePolicy`.
 
 # Architecture Decision Document
 
@@ -37,7 +40,7 @@ _Ce document se construit collaborativement à travers une découverte étape pa
 **Scale & Complexity:**
 - Domaine primaire : Embedded C++ / STM32 HAL + FreeRTOS CMSIS V2
 - Niveau de complexité : **Haute** — contraintes temps-réel strictes + multi-tâches + hardware constraints
-- Composants architecturaux estimés : 8 classes métier, 4 interfaces domaine, 9 interfaces HAL, 6 tâches FreeRTOS
+- Composants architecturaux réels : 5 tâches FreeRTOS (6 threads avec `rxTask`/`txTask`), 10 interfaces (`IBus`, `ISensor`, `IActuator`, `IActuatorManager`, `ICommChannel`, `IMotorHAL`, `IEncoderHAL`, `IOdomHAL`, `IAdcHAL`, `IInputCaptureHAL`), 4 capteurs concrets, 6 drivers HW
 
 ### Technical Constraints & Dependencies
 
@@ -45,14 +48,14 @@ _Ce document se construit collaborativement à travers une découverte étape pa
 - **Langage** : C++ orienté objet, sans exceptions, sans RTTI
 - **Mémoire** : Statique uniquement — tableaux de taille fixe (MAX_SENSORS=15, MAX_ACTUATORS=10)
 - **Scheduling** : Préemptif FreeRTOS — priorités explicites requises pour chaque tâche
-- **Point d'entrée système** : `SystemInit::boot()` câble tout — `main.cpp` = 3 lignes
+- **Point d'entrée système** : `App/cppMain.cpp` câble tout (objets statiques au scope fichier + `cppMain()`) — le `main.c` généré par CubeMX appelle `cppMain()`
 
 ### Cross-Cutting Concerns Identified
 
 - **Temps-réel** : Toutes décisions doivent préserver le déterminisme de OdoControl (aucun blocking sur chemin critique)
-- **Sécurité** : `xQueueReset()` comme primitif d'arrêt d'urgence universel — propager ce pattern
+- **Sécurité** : watchdog de commande logiciel — `OdoControl` remet la consigne à 0 si aucune commande n'arrive sous `CMD_WATCHDOG_TIMEOUT_MS`
 - **Observabilité** : IBus est le seul canal de sortie — chaque module doit publier son état de santé
-- **Injection de dépendance** : Toutes les dépendances passent par le constructeur — `SystemInit` est l'unique point de câblage
+- **Injection de dépendance** : Toutes les dépendances passent par le constructeur — `cppMain.cpp` est l'unique point de câblage
 
 ## Starter Template Evaluation
 
@@ -69,7 +72,7 @@ Aucun starter template générique n'existe pour STM32 C++ OO. La fondation stan
 **Rationale for Selection:**
 - Génère la configuration HAL complète (horloges, périphériques, DMA, IRQ)
 - Intègre FreeRTOS CMSIS V2 nativement
-- Produit le `main.c` remplacé par `main.cpp` + `SystemInit::boot()`
+- Produit le `main.c` (non modifié) qui appelle `cppMain()` — le câblage C++ vit dans `App/cppMain.cpp`
 - Seule approche maintenue officiellement par STMicroelectronics
 
 **Initialisation du projet:**
@@ -80,7 +83,7 @@ Aucun starter template générique n'existe pour STM32 C++ OO. La fondation stan
 # 2. Activer FreeRTOS (CMSIS V2)
 # 3. Configurer périphériques : TIM (encodeurs), PWM (moteurs), UART, USB, ETH
 # 4. Générer le code
-# 5. Renommer main.c → main.cpp, ajouter SystemInit::boot()
+# 5. Déclarer cppMain() (extern "C") et l'appeler depuis main.c ; câbler dans App/cppMain.cpp
 ```
 
 **Architectural Decisions Provided by Starter:**
@@ -99,28 +102,32 @@ Tests unitaires sur host via Google Test + mocks HAL injectés — tests d'inté
 ```
 Core/
   Inc/         ← interfaces HAL générées (CubeMX)
-  Src/         ← main.cpp (3 lignes : SystemInit::boot() + vTaskStartScheduler())
+  Src/         ← main.c généré CubeMX, appelle cppMain()
 App/
-  Interfaces/  ← tous les contrats I*.h (IBus, ISensor, IActuator, IMotorHAL, etc.)
+  cppMain.cpp  ← point d'entrée C++ : câblage statique complet + création des tâches
+  Config.h     ← toutes les constexpr (fréq, stacks, prios, PID, seuils, policies)
+  Interfaces/  ← tous les contrats I*.h (IBus, ISensor, IActuator, IMotorHAL, IAdcHAL, etc.)
   Drivers/     ← pilotent directement le HW via registres STM32 / HAL CubeMX
-               │   Encoder.h/.cpp, Drv8262.h/.cpp, Motor.h/.cpp
+               │   Encoder.h/.cpp, Drv8262.h/.cpp
+               │   Adc.h/.cpp, InputCapture.h/.cpp
                └── UartChannel.h/.cpp, UsbCdcChannel.h/.cpp
   Services/    ← orchestrent des Drivers via interfaces, sans toucher le HW
-               └── Odometry.h/.cpp
+               │   Odometry.h/.cpp, ActuatorManager.h/.cpp, BusFormat.h/.cpp
+               └── Sensors/  ← capteurs concrets (ISensor) : B5WLB2101, Pololu5472,
+                               InternalTemperature, MotorCurrentSense
   Controllers/ ← algorithmes purs, zéro dépendance FreeRTOS ou HW
                └── Pid.h/.cpp (+ futurs filtres, régulateurs...)
   Tasks/       ← tâches FreeRTOS uniquement (boucle infinie ou osThreadNew)
                │   OdoControl.h/.cpp      (1 tâche 200Hz, vTaskDelayUntil)
                │   MotionPlanner.h/.cpp   (1 tâche event-driven, xTaskNotify)
-               │   SensorManager.h/.cpp   (1 tâche polling, vTaskDelay)
-               │   Monitoring.h/.cpp      (1 tâche queue-driven, IBus)
+               │   SensorManager.h/.cpp   (1 tâche multi-cadence, acquisition non-bloquante)
+               │   Monitoring.h/.cpp      (1 tâche, lecture snapshots, IBus)
                └── ExternalComm.h/.cpp    (2 tâches : rxTask + txTask, impl IBus)
-  SystemInit/  ← SystemInit.h/.cpp (câblage statique complet, zéro new)
 Drivers/       ← HAL CubeMX généré (ne pas modifier manuellement)
 Middlewares/   ← FreeRTOS CMSIS V2 (ne pas modifier manuellement)
 ```
 
-**Convention Tasks/ :** `ExternalComm` a deux entry points statiques (`rxTask`, `txTask`) créés par `SystemInit` — une seule classe, deux `xTaskCreate`. Un fichier = une classe = N tâches FreeRTOS possibles si la classe les gère toutes.
+**Convention Tasks/ :** `ExternalComm` a deux entry points statiques (`rxTask`, `txTask`) créés par `cppMain()` — une seule classe, deux `xTaskCreate`. Un fichier = une classe = N tâches FreeRTOS possibles si la classe les gère toutes.
 
 **Note:** La première story d'implémentation = créer le projet CubeMX avec la configuration hardware complète et valider que FreeRTOS démarre avec une tâche vide.
 
@@ -144,11 +151,13 @@ Middlewares/   ← FreeRTOS CMSIS V2 (ne pas modifier manuellement)
 
 **Protocole :** ASCII Option A — `TOPIC PAYLOAD\n`
 
+L'`enum class Topic` (`IBus.h`) ne couvre que les sorties Robot → PC : `TELEMETRY`, `ALERT`, `LOG`, `HEALTH`. Les commandes entrantes (`CMD`) ne transitent pas par IBus — elles sont parsées directement par `ExternalComm::rxTask`.
+
 Mapping topics IBus ↔ préfixes ASCII :
 
 | IBus Topic   | Préfixe ASCII | Direction      |
 |--------------|---------------|----------------|
-| —            | `CMD`         | PC → Robot     |
+| — (RX only)  | `CMD`         | PC → Robot     |
 | `TELEMETRY`  | `TEL`         | Robot → PC     |
 | `ALERT`      | `ALT`         | Robot → PC     |
 | `LOG`        | `LOG`         | Robot → PC     |
@@ -163,12 +172,14 @@ CMD ACTUATOR PUMP_1 ON\n
 # Robot → PC
 TEL ODO 1.23 0.45 90.0\n
 ALT PROXIMITY_LOW 0.12\n
-LOG INFO SystemInit OK\n
+LOG INFO Program start\n
 HLT TEMP 36.5 CURRENT 1.2\n
 ```
 
 **Parsing côté STM32 :** `sscanf` sur buffer UART, dispatch sur premier token (`CMD`).
 **Parsing côté PC :** split sur espace, premier token = topic, reste = payload.
+
+**Routage par canal (`ComQueuePolicy`) :** chaque canal de sortie (UART/USB/ETH) filtre les topics qu'il émet via une `Config::ComQueuePolicy` (`{ log, tel, alt, hlt }`). Par défaut, l'UART (canal DEBUG) reçoit `log`+`alt`, l'USB (canal PC) reçoit `tel`+`alt`+`hlt`. Le flag `ENABLE_HIGH_SPEED_TUNING` bascule sur un profil minimal (logs seuls) pour le tuning haute fréquence. `ExternalComm` applique ces politiques à l'émission, en plus de la politique de queue par topic (`OVERWRITE` pour TEL/ALT, `DROP_SILENT` pour HLT/LOG).
 
 ### System Configuration
 
@@ -176,14 +187,31 @@ HLT TEMP 36.5 CURRENT 1.2\n
 
 ```cpp
 namespace Config {
-    static constexpr uint32_t ODO_FREQ_HZ      = 200;
-    static constexpr uint8_t  MAX_SENSORS      = 15;
-    static constexpr uint8_t  MAX_ACTUATORS    = 10;
-    static constexpr float    PID_KP_DEFAULT   = 1.0f;
-    static constexpr float    PID_KI_DEFAULT   = 0.1f;
-    static constexpr float    PID_KD_DEFAULT   = 0.05f;
+    // Fréquences de tâche / capteurs
+    static constexpr uint32_t TASK_ODO_FREQ_HZ        = 200;
+    static constexpr uint32_t TASK_MONITORING_FREQ_HZ = 10;
+    static constexpr uint32_t SENSOR_TEMP_FREQ_HZ     = 1;
+    static constexpr uint32_t SENSOR_CURRENT_FREQ_HZ  = 5;
+    static constexpr uint32_t SENSOR_B5W_FREQ_HZ      = 10;
+    static constexpr uint32_t SENSOR_POLOLU5472_FREQ_HZ = 10;
+
+    // Bornes des tableaux fixes (NFR-02 - aucune allocation dynamique)
+    static constexpr uint8_t  MAX_SENSORS   = 15;
+    static constexpr uint8_t  MAX_ACTUATORS = 10;
+
+    // Géométrie / odométrie, gains PID, seuils d'alarme capteurs,
+    // watchdog de commande, stacks et priorités FreeRTOS, policies par canal...
+    static constexpr float    PID_KP_DEFAULT = 0.3f;  // PID vitesse linéaire
+    static constexpr float    PID_KP_ANGLE_DEFAULT = 0.6f; // PID vitesse angulaire
+    static constexpr float    TEMP_ALARM_C = 60.0f;
+    static constexpr float    CURRENT_ALARM_MA = 4000.0f;
+    static constexpr uint32_t MONITORING_STALE_MS = 500;
+    static constexpr bool     CMD_WATCHDOG_ENABLED = true;
+    static constexpr uint32_t CMD_WATCHDOG_TIMEOUT_MS = 1000;
 }
 ```
+
+`Config.h` centralise désormais aussi : la géométrie du robot (`WHEEL_RADIUS_M`, `WHEEL_BASE_M`, `TICKS_PER_REV`, `D_PER_TICK`), les gains de feedforward et filtres EMA d'`OdoControl`, les signes encodeurs/moteurs, le watchdog de commande, et les politiques de canal (`UART_POLICY`/`USB_POLICY`/`ETH_POLICY`).
 
 Avantage : empreinte mémoire nulle, optimisation compile-time complète, valeurs visibles dans le code.
 
@@ -201,7 +229,7 @@ Les erreurs non-critiques (timeout, donnée obsolète) sont publiées sur `LOG` 
 bus_->publish(Topic::LOG, "LOG WARN Sensor timeout ID=3\n");
 ```
 
-`Monitoring` souscrit à `ALERT` et agrège — aucun module ne connaît `Monitoring` directement.
+`Monitoring` n'écoute pas le bus : il agrège l'état de santé via le modèle pull (lecture des snapshots, cf. section suivante) puis publie lui-même sur `HEALTH`/`ALERT` — aucun module ne connaît `Monitoring` directement.
 
 ### Monitoring — Accès aux données (Pull model)
 
@@ -212,9 +240,12 @@ bus_->publish(Topic::LOG, "LOG WARN Sensor timeout ID=3\n");
 ```cpp
 // Dans OdoControl.h
 struct OdoSnapshot {
-    float x, y, angle;
-    float speedLeft, speedRight;
-    uint32_t timestamp; // HAL_GetTick()
+    float x, y, angle;        // pose
+    float v, w;               // vitesses linéaire / angulaire
+    float vLeft, vRight;      // vitesses roues
+    float voltLeft, voltRight;// tensions moteurs appliquées
+    bool motorError;
+    uint32_t timestamp;       // HAL_GetTick()
 };
 static OdoSnapshot latestSnapshot; // écrit par OdoControl, lu par Monitoring
 ```
@@ -236,17 +267,19 @@ taskEXIT_CRITICAL();
 La section critique côté lecteur dure ~50ns à 168MHz (copie de ~24 octets) — aucun impact sur le déterminisme d'OdoControl. `Monitoring` lit la struct et vérifie le timestamp pour détecter une donnée obsolète.
 
 **Modules exposant une snapshot :**
-- `OdoControl::OdoSnapshot` — vitesse, position, erreur PID
-- `SensorManager::SensorSnapshot` — état de chaque capteur, dernière valeur lue
+- `OdoControl::OdoSnapshot` — pose, vitesses, tensions moteurs, flag d'erreur
+- `SensorManager::SensorSnapshot` — `values[MAX_SENSORS]`, `timestamps[MAX_SENSORS]`, `alarmMask` (1 bit par capteur), `count` ; `sensorNames[MAX_SENSORS]` expose les libellés associés
 - `ExternalComm::CommSnapshot` — compteurs RX/TX, dernière commande reçue
 
-**Règle :** Les snapshots sont `static` dans la classe, initialisées à zéro dans `SystemInit`. `Monitoring` ne connaît que les types concrets des snapshots, pas les instances des tâches.
+**Règle :** Les snapshots sont `static` dans la classe, initialisées à zéro à la définition statique. `Monitoring` ne connaît que les types concrets des snapshots, pas les instances des tâches.
 
 **Détection de donnée obsolète :** Si `HAL_GetTick() - snapshot.timestamp > Config::MONITORING_STALE_MS`, `Monitoring` publie une alerte sur IBus.
 
 ### Watchdog
 
-Non requis — le robot opère sous supervision humaine permanente. Simplifie l'architecture des tâches (pas de kick watchdog à distribuer).
+**Watchdog hardware :** non requis — le robot opère sous supervision humaine permanente. Simplifie l'architecture des tâches (pas de kick watchdog à distribuer).
+
+**Watchdog de commande (logiciel) :** `OdoControl` implémente un garde-fou de sécurité — si aucune nouvelle commande n'est reçue dans `Config::CMD_WATCHDOG_TIMEOUT_MS` (1000 ms par défaut), la consigne est remise à zéro et le robot s'arrête. Activé via `Config::CMD_WATCHDOG_ENABLED`. Protège contre une perte de lien de communication PC ↔ robot.
 
 ### Decision Impact Analysis
 
@@ -254,7 +287,7 @@ Non requis — le robot opère sous supervision humaine permanente. Simplifie l'
 1. `App/Config.h` — toutes les constantes, compilé en premier
 2. `App/Interfaces/` — contrats IBus, ISensor, IActuator
 3. `ExternalComm` — implémente IBus, parseur ASCII CMD, formatter TEL/ALT/LOG/HLT
-4. `SystemInit` — câble tout, instancie les queues BUS_CONFIG
+4. `cppMain.cpp` — câble tout, instancie les queues et applique `BUS_CONFIG`
 
 **Dépendances croisées :**
 - Toute classe qui publie sur IBus doit connaître le format ASCII de son topic
@@ -274,10 +307,10 @@ IMotorHAL* _motorLeft;
 **Constantes :** ALL_CAPS dans `namespace Config`
 ```cpp
 namespace Config {
-    static constexpr uint32_t ODO_FREQ_HZ    = 200;
-    static constexpr uint8_t  MAX_SENSORS    = 15;
-    static constexpr uint16_t STACK_ODO      = 512;
-    static constexpr UBaseType_t PRIO_ODO    = 5;
+    static constexpr uint32_t TASK_ODO_FREQ_HZ  = 200;
+    static constexpr uint8_t  MAX_SENSORS       = 15;
+    static constexpr uint16_t STACK_ODO_CONTROL = 512;
+    static constexpr UBaseType_t PRIO_ODO_CONTROL = 6;
 }
 ```
 
@@ -308,13 +341,13 @@ Convention : `APP_<DOSSIER>_<FICHIER>_H`
 
 ### IBus Message Formatting
 
-Tous les modules utilisent `BusFormat` (`App/BusFormat.h`) — jamais de `snprintf` inline :
+Pour les topics structurés (TELEMETRY/ALERT/HEALTH), tous les modules utilisent `BusFormat` (`App/Services/BusFormat.h`) — jamais de `snprintf` inline. Pour les logs, on passe par les helpers variadiques `ExternalComm::log_info/log_warn/log_error` :
 
 ```cpp
 // ✅ Correct
-bus_->publish(Topic::TELEMETRY, BusFormat::telOdo(x, y, angle));
+bus_->publish(Topic::TELEMETRY, BusFormat::telOdoPose(ts, x, y, angle));
 bus_->publish(Topic::ALERT,     BusFormat::altProximity(distance));
-bus_->publish(Topic::LOG,       BusFormat::logInfo("SystemInit OK"));
+ExternalComm::log_info("Program start");
 
 // ❌ Interdit — snprintf inline
 char buf[64];
@@ -333,18 +366,18 @@ namespace Config {
     // Stacks (en mots de 32 bits)
     static constexpr uint16_t STACK_ODO_CONTROL    = 512;
     static constexpr uint16_t STACK_MOTION_PLANNER = 256;
-    static constexpr uint16_t STACK_SENSOR_MANAGER = 256;
-    static constexpr uint16_t STACK_MONITORING     = 256;
-    static constexpr uint16_t STACK_EXTCOMM_RX     = 256;
+    static constexpr uint16_t STACK_SENSOR_MANAGER = 512;
+    static constexpr uint16_t STACK_MONITORING     = 1024;
+    static constexpr uint16_t STACK_EXTCOMM_RX     = 512;
     static constexpr uint16_t STACK_EXTCOMM_TX     = 256;
 
     // Priorités FreeRTOS (plus haute = plus prioritaire)
-    static constexpr UBaseType_t PRIO_ODO_CONTROL    = 5;
-    static constexpr UBaseType_t PRIO_MOTION_PLANNER = 4;
-    static constexpr UBaseType_t PRIO_EXTCOMM_RX     = 4;
-    static constexpr UBaseType_t PRIO_EXTCOMM_TX     = 3;
-    static constexpr UBaseType_t PRIO_SENSOR_MANAGER = 2;
-    static constexpr UBaseType_t PRIO_MONITORING     = 1;
+    static constexpr UBaseType_t PRIO_ODO_CONTROL    = 6;
+    static constexpr UBaseType_t PRIO_MOTION_PLANNER = 5;
+    static constexpr UBaseType_t PRIO_EXTCOMM_RX     = 5;
+    static constexpr UBaseType_t PRIO_EXTCOMM_TX     = 4;
+    static constexpr UBaseType_t PRIO_SENSOR_MANAGER = 3;
+    static constexpr UBaseType_t PRIO_MONITORING     = 2;
 }
 ```
 
@@ -415,57 +448,49 @@ Wall-A-Software/                   ← racine du dépôt git
 │   │   └── Startup/
 │   │       └── startup_stm32f407igtx.s
 │   │
-│   ├── App/
-│   │   ├── cppMain.cpp            ← point d'entrée C++ : boot() + vTaskStartScheduler()
-│   │   ├── Config.h               ← toutes les constexpr (fréq, stacks, prios, PID)
+│   ├── App/                       ← code métier édité à la main (avec Tests/)
+│   │   ├── cppMain.cpp            ← point d'entrée C++ : câblage statique + création des tâches
+│   │   ├── Config.h               ← toutes les constexpr (fréq, stacks, prios, PID, seuils, policies)
 │   │   │
 │   │   ├── Interfaces/            ← contrats purs I*.h, aucune implémentation
 │   │   │   ├── IActuator.h
-│   │   │   ├── IActuatorHAL.h
 │   │   │   ├── IActuatorManager.h
+│   │   │   ├── IAdcHAL.h          ← acquisition ADC non-bloquante (bind/start/rawValue/doneFlag)
 │   │   │   ├── IBus.h
-│   │   │   ├── ICommChannel.h
+│   │   │   ├── ICom.h             ← classe ICommChannel (transmit / startReceive)
 │   │   │   ├── IEncoderHAL.h
+│   │   │   ├── IInputCaptureHAL.h ← mesure de largeur d'impulsion (init/getLastPulse/hasNewPulse)
 │   │   │   ├── IMotorHAL.h
 │   │   │   ├── IOdomHAL.h
-│   │   │   ├── ISensor.h
-│   │   │   └── ISensorHAL.h
+│   │   │   └── ISensor.h          ← read/isAlarm + trigger/doneFlag/isActive (acquisition non-bloquante)
 │   │   │
 │   │   ├── Drivers/               ← pilotent directement le HW (registres STM32 / HAL CubeMX)
-│   │   │   ├── Drv8262.h/.cpp     ← pilote le circuit DRV8262 via GPIO/PWM
-│   │   │   ├── Encoder.h/.cpp     ← lit les timers encodeurs via HAL
-│   │   │   ├── InternalTemperature.h/.cpp  ← lecture ADC température interne STM32
-│   │   │   ├── MotorCurrentSense.h/.cpp    ← lecture ADC courant moteur
-│   │   │   ├── UartChannel.h/.cpp ← canal UART via HAL_UART
-│   │   │   ├── UsbCdcChannel.h/.cpp        ← canal USB CDC via HAL USB
-│   │   │   └── Stubs/             ← implémentations stub des interfaces actionneurs/capteurs
-│   │   │       ├── CurrentSensor.h/.cpp
-│   │   │       ├── LinearTransducer.h/.cpp
-│   │   │       ├── ProximitySensor.h/.cpp
-│   │   │       ├── Pump.h/.cpp
-│   │   │       ├── Servo.h/.cpp
-│   │   │       └── TemperatureSensor.h/.cpp
+│   │   │   ├── Adc.h/.cpp         ← conversion ADC non-bloquante (IAdcHAL), notify ISR, registre intrusif
+│   │   │   ├── Drv8262.h/.cpp     ← pont moteur DRV8262 via PWM (IMotorHAL)
+│   │   │   ├── Encoder.h/.cpp     ← position quadrature via timer (IEncoderHAL)
+│   │   │   ├── InputCapture.h/.cpp← mesure largeur d'impulsion timer (IInputCaptureHAL), registre intrusif
+│   │   │   ├── UartChannel.h/.cpp ← canal UART via HAL_UART (ICommChannel)
+│   │   │   └── UsbCdcChannel.h/.cpp        ← canal USB CDC via stack USB (ICommChannel)
 │   │   │
 │   │   ├── Services/              ← orchestrent des Drivers via interfaces, sans toucher le HW
+│   │   │   ├── ActuatorManager.h/.cpp ← dispatch des commandes actionneurs par id (IActuatorManager)
 │   │   │   ├── BusFormat.h/.cpp   ← helpers formatage ASCII IBus
-│   │   │   ├── Motor.h/.cpp       ← commande un moteur via IMotorHAL
-│   │   │   └── Odometry.h/.cpp    ← calcul position/vitesse à partir de IEncoderHAL
+│   │   │   ├── Odometry.h/.cpp    ← position/vitesse à partir de 2× IEncoderHAL (IOdomHAL)
+│   │   │   └── Sensors/           ← capteurs concrets, chacun implémente ISensor
+│   │   │       ├── B5WLB2101.h/.cpp           ← proximité analogique (IAdcHAL)
+│   │   │       ├── InternalTemperature.h/.cpp ← NTC via ADC (IAdcHAL)
+│   │   │       ├── MotorCurrentSense.h/.cpp   ← courant moteur primaire/secondaire via ADC (IAdcHAL)
+│   │   │       └── Pololu5472.h/.cpp          ← proximité PWM via InputCapture (IInputCaptureHAL)
 │   │   │
 │   │   ├── Controllers/           ← algorithmes purs, zéro dépendance FreeRTOS ou HW
 │   │   │   └── Pid.h/.cpp         ← régulateur PID générique
 │   │   │
-│   │   ├── Tasks/                 ← tâches FreeRTOS uniquement (boucle infinie ou osThreadNew)
-│   │   │   ├── ActuatorManager.h/.cpp      ← tâche gestion actionneurs, impl IActuatorManager
-│   │   │   ├── ExternalComm.h/.cpp         ← 2 tâches rxTask+txTask, impl IBus
-│   │   │   ├── Monitoring.h/.cpp           ← 1 tâche queue-driven, seuils/alertes
-│   │   │   ├── MotionPlanner.h/.cpp        ← 1 tâche event-driven, xTaskNotify
-│   │   │   ├── OdoControl.h/.cpp           ← 1 tâche 200Hz, vTaskDelayUntil
-│   │   │   ├── SensorManager.h/.cpp        ← 1 tâche polling, ISensor[MAX_SENSORS]
-│   │   │   └── StubActuatorManager.h       ← stub no-op de IActuatorManager pour tests
-│   │   │
-│   │   └── SystemInit/
-│   │       ├── SystemInit.h
-│   │       └── SystemInit.cpp     ← boot(), câblage statique complet, zéro new
+│   │   └── Tasks/                 ← tâches FreeRTOS uniquement (boucle infinie ou osThreadNew)
+│   │       ├── ExternalComm.h/.cpp         ← 2 tâches rxTask+txTask, impl IBus, policies par canal
+│   │       ├── Monitoring.h/.cpp           ← 1 tâche, lecture snapshots, seuils/alertes/stale
+│   │       ├── MotionPlanner.h/.cpp        ← 1 tâche event-driven (cmd mailbox + xTaskNotify alarmes)
+│   │       ├── OdoControl.h/.cpp           ← 1 tâche 200Hz, vTaskDelayUntil, PID + odométrie
+│   │       └── SensorManager.h/.cpp        ← 1 tâche multi-cadence, groupes de capteurs non-bloquants
 │   │
 │   ├── Drivers/                   ← généré CubeMX (ne pas modifier)
 │   │   ├── BSP/
@@ -496,16 +521,18 @@ Wall-A-Software/                   ← racine du dépôt git
 │   └── Tests/                     ← tests unitaires sur host (Google Test / GMock)
 │       ├── CMakeLists.txt
 │       ├── run_tests.sh
-│       ├── Mocks/                 ← utilisent MOCK_METHOD GMock, vérifient les appels
+│       ├── Mocks/                 ← doublures de test (GMock + fakes sans GMock)
+│       │   ├── FakeAdcHAL.h
+│       │   ├── FakeInputCaptureHAL.h
 │       │   ├── MockActuator.h
-│       │   ├── MockActuatorHAL.h
+│       │   ├── MockAdcGroup.h
+│       │   ├── MockAnalogSource.h
 │       │   ├── MockBus.h
 │       │   ├── MockCommChannel.h
 │       │   ├── MockEncoderHAL.h
 │       │   ├── MockMotorHAL.h
 │       │   ├── MockOdomHAL.h
-│       │   ├── MockSensor.h
-│       │   └── MockSensorHAL.h
+│       │   └── MockSensor.h
 │       ├── Stubs/                 ← headers/implémentations minimales pour compiler sur host
 │       │   ├── FreeRTOS.h / FreeRTOSStub.cpp
 │       │   ├── HalStub.h
@@ -514,7 +541,6 @@ Wall-A-Software/                   ← racine du dépôt git
 │       │   ├── StaticDefs.cpp
 │       │   └── usbd_cdc_if.h
 │       └── Unit/                  ← fichiers *Test.cpp, un par classe testée
-│           ├── ActuatorDriversTest.cpp
 │           ├── ActuatorManagerTest.cpp
 │           ├── BusFormatTest.cpp
 │           ├── ConcreteOdomHALTest.cpp
@@ -545,9 +571,10 @@ Wall-A-Software/                   ← racine du dépôt git
 | `App/Interfaces/` | Contrat pur `I*.h` — aucune implémentation, aucune dépendance HW |
 | `App/Drivers/` | Parle directement au HW via registres STM32 ou HAL CubeMX — implémente une `I***HAL` ou `ICommChannel` |
 | `App/Services/` | Orchestre un ou plusieurs Drivers **via leurs interfaces** — aucun appel HAL direct, pas une tâche FreeRTOS |
+| `App/Services/Sensors/` | Capteur concret implémentant `ISensor` — convertit une source brute (`IAdcHAL`/`IInputCaptureHAL` injectée) en grandeur physique + alarme |
 | `App/Controllers/` | Algorithme pur — zéro dépendance FreeRTOS, zéro dépendance HW, testable sans matériel |
 | `App/Tasks/` | Hérite ou instancie une tâche FreeRTOS — contient obligatoirement une boucle infinie ou `osThreadNew` |
-| `Tests/Mocks/` | Utilise `MOCK_METHOD` GMock — vérifie que les appels ont bien eu lieu |
+| `Tests/Mocks/` | Doublures de test — `MOCK_METHOD` GMock (vérifient les appels) ou fakes légers (`Fake*HAL`) qui rejouent des valeurs |
 | `Tests/Stubs/` | Implémentation minimale sans GMock — permet de compiler les tests sur host sans matériel |
 | `Tests/Unit/` | Fichiers `*Test.cpp` — un fichier par classe testée |
 
@@ -563,11 +590,11 @@ Les fonctions HAL générées (`HAL_GPIO_WritePin`, `HAL_TIM_ReadCapturedValue`,
 
 **3. Une tâche ne peut pas instancier ou utiliser un driver custom directement**
 
-`SensorManager` ne crée pas un `VL53L0X` en interne — il reçoit un tableau d'`ISensor*` déjà instanciés par `SystemInit`. L'implémentation concrète est injectée. On peut ajouter un capteur en créant une nouvelle classe concrète sans toucher `SensorManager`.
+`SensorManager` ne crée pas un `B5WLB2101` en interne — il reçoit des groupes d'`ISensor*` déjà instanciés et câblés à leur source (`IAdcHAL`/`IInputCaptureHAL`) par `cppMain.cpp`. L'implémentation concrète est injectée. On peut ajouter un capteur en créant une nouvelle classe `ISensor` sans toucher `SensorManager`.
 
-**4. `SystemInit` est le seul endroit qui instancie et câble**
+**4. `cppMain.cpp` est le seul endroit qui instancie et câble**
 
-Aucune classe ne crée d'instance en dehors de `SystemInit::boot()`. Toutes les instances sont en mémoire statique, tous les pointeurs injectés via constructeurs. Zéro allocation dynamique, empreinte mémoire connue à la compilation, et un seul endroit pour comprendre le câblage complet du système.
+Aucune classe ne crée d'instance en dehors de `cppMain.cpp`. Toutes les instances sont en mémoire statique (objets au scope fichier), tous les pointeurs injectés via constructeurs ; `cppMain()` se contente de résoudre les dépendances circulaires (ex. `actuatorMgr.setBus(&extComm)`), d'appeler `InputCapture::initAll()`, puis de créer les tâches. Zéro allocation dynamique, empreinte mémoire connue à la compilation, et un seul endroit pour comprendre le câblage complet du système.
 
 ### Requirements to Structure Mapping
 
@@ -575,31 +602,35 @@ Aucune classe ne crée d'instance en dehors de `SystemInit::boot()`. Toutes les 
 |----------------|------------|
 | Locomotion PID + odométrie | `Tasks/OdoControl` + `Services/Odometry` + `Controllers/Pid` |
 | Planification trajectoire + réactivité alarmes | `Tasks/MotionPlanner` |
-| Pilotage moteurs HW | `Drivers/Motor` + `Drivers/Drv8262` |
+| Pilotage moteurs HW | `Drivers/Drv8262` (implémente `IMotorHAL`) |
 | Lecture encodeurs HW | `Drivers/Encoder` |
-| Acquisition capteurs | `Tasks/SensorManager` |
-| Commande actionneurs | `Tasks/ExternalComm` → `IActuatorManager` |
+| Acquisition capteurs | `Tasks/SensorManager` + `Services/Sensors/*` + `Drivers/Adc` + `Drivers/InputCapture` |
+| Commande actionneurs | `Tasks/ExternalComm` → `Services/ActuatorManager` |
 | Supervision et agrégation télémétrie | `Tasks/Monitoring` |
 | Communication PC UART | `Drivers/UartChannel` → `Tasks/ExternalComm` |
 | Communication PC USB | `Drivers/UsbCdcChannel` → `Tasks/ExternalComm` |
 | Contrats inter-modules | `App/Interfaces/` |
 | Format messages ASCII | `App/Services/BusFormat.h/.cpp` |
 | Toutes les constantes | `App/Config.h` |
-| Câblage système | `App/SystemInit/SystemInit.cpp` |
+| Câblage système | `App/cppMain.cpp` |
 
 ### Data Flow
 
 ```
-PC → UART/USB/ETH → ExternalComm::rxTask → MotionPlanner  (CMD MOVE)
-                                          → ActuatorManager (CMD ACTUATOR)
+PC → UART/USB/ETH → ExternalComm::rxTask → MotionPlanner    (CMD MOVE)
+                                          → ActuatorManager  (CMD ACTUATOR)
 
-Encodeurs → OdoControl → PID → Moteurs
-OdoControl → IBus (TEL ODO) → ExternalComm::txTask → PC
+Encodeurs → Odometry → OdoControl → PID → Drv8262 → Moteurs
+OdoControl → IBus (TEL) → ExternalComm::txTask → PC
+OdoControl → OdoSnapshot (shared mem) → Monitoring
 
-SensorManager → xTaskNotify → MotionPlanner (alarme critique)
-SensorManager → IBus (ALT/HLT) → ExternalComm::txTask → PC
+ADC / InputCapture → ISensor.trigger() → ISR notify → SensorManager
+SensorManager → SensorSnapshot (shared mem) → Monitoring
+SensorManager → xTaskNotify (alarmMask) → MotionPlanner    (alarme critique)
 
-Tous modules → IBus (LOG) → ExternalComm::txTask → PC
+Monitoring → IBus (HLT/ALT, détection stale) → ExternalComm::txTask → PC
+
+Tous modules → IBus (LOG) → ExternalComm::txTask → DEBUG (UART)
 ```
 
 ### Dependency Graph
@@ -620,7 +651,7 @@ digraph G {
     ExtComm    [label=<<B>ExternalComm</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">Queue</FONT></I>> fillcolor="#c8daf5"]
     MoPlan     [label=<<B>MotionPlanner</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">Queue or Notify</FONT></I>>]
     OdoCtrl    [label=<<B>OdoControl<BR/><FONT POINT-SIZE="10">TRÈS HAUTE PRIORITÉ</FONT><BR/></B><I><FONT POINT-SIZE="10" COLOR="#336699">200Hz</FONT></I>> fillcolor="#ffd9d9"]
-    SenMgr     [label=<<B>SensorManager</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">10Hz</FONT></I>>]
+    SenMgr     [label=<<B>SensorManager</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">multi-cadence 1–10Hz</FONT></I>>]
     Monitoring [label=<<B>Monitoring</B><BR/><I><FONT POINT-SIZE="10" COLOR="#336699">10Hz</FONT></I>>]
 
     { rank=same; PC; DEBUG }
@@ -650,11 +681,11 @@ digraph G {
 
 ### Coherence Validation ✅
 
-**Decision Compatibility :** IBus + injection de dépendance + zéro `new` + `SystemInit` forment un système cohérent sans contradictions. Les priorités FreeRTOS respectent la hiérarchie temps-réel. Le format ASCII est cohérent avec `BusFormat` centralisé.
+**Decision Compatibility :** IBus + injection de dépendance + zéro `new` + câblage statique dans `cppMain.cpp` forment un système cohérent sans contradictions. Les priorités FreeRTOS respectent la hiérarchie temps-réel. Le format ASCII est cohérent avec `BusFormat` centralisé.
 
-**Pattern Consistency :** Les conventions de nommage (`_prefix`, `ALL_CAPS`, `PascalCase`) sont uniformes. La règle "aucune tâche n'appelle directement une autre tâche" est respectée partout — `ExternalComm` → `ActuatorManager` via queue, pas via appel direct.
+**Pattern Consistency :** Les conventions de nommage (`_prefix`, `ALL_CAPS`, `PascalCase`) sont uniformes. La règle "aucune tâche n'appelle directement une autre tâche" est respectée — les flux inter-tâches passent par IBus ou les primitives FreeRTOS (`xQueueOverwrite`, `xTaskNotify`). `ExternalComm` → `ActuatorManager` est un appel direct autorisé car `ActuatorManager` est un Service, pas une tâche.
 
-**Structure Alignment :** La structure `App/` supporte toutes les décisions. Les frontières sont claires et applicables. `SystemInit` est le seul point de câblage.
+**Structure Alignment :** La structure `App/` supporte toutes les décisions. Les frontières sont claires et applicables. `cppMain.cpp` est le seul point de câblage.
 
 ### Requirements Coverage Validation ✅
 
@@ -663,8 +694,8 @@ digraph G {
 | Contrôle moteur 200Hz | `OdoControl` + mailbox |
 | Odométrie encodeurs | `OdoControl` seul lecteur `IEncoderHAL` |
 | Capteurs (jusqu'à 15) | `SensorManager` + `ISensor[MAX_SENSORS]` |
-| Actionneurs (jusqu'à 10) | `ActuatorManager` + `IActuator[MAX_ACTUATORS]` |
-| Communication PC tri-canal | `ExternalComm` UART/USB/ETH ASCII |
+| Actionneurs (jusqu'à 10) | `ActuatorManager` (Service) + `IActuator[MAX_ACTUATORS]` |
+| Communication PC tri-canal | `ExternalComm` — UART + USB actifs, ETH réservé (`eth = nullptr`, `ETH_POLICY` prête) |
 | Alarmes rapides ≤1 tick | `xTaskNotify` bitmask |
 | Télémétrie | IBus → `ExternalComm::txTask` |
 | Extensibilité capteurs/actionneurs | `ISensor`/`IActuator` — nouvelle classe uniquement |
@@ -673,11 +704,11 @@ digraph G {
 ### Implementation Readiness Validation ✅
 
 Tous les agents/développeurs disposent de :
-- Contrats d'interface complets (`App/Interfaces/` + `App/Interfaces/HAL/`)
+- Contrats d'interface complets (`App/Interfaces/` — interfaces domaine + HAL au même niveau)
 - Règles de nommage et de structure explicites
 - Format de communication défini (`BusFormat`)
 - Configuration centralisée (`Config.h`)
-- Un seul point de câblage (`SystemInit`)
+- Un seul point de câblage (`App/cppMain.cpp`)
 
 ### Architecture Completeness Checklist
 
@@ -714,7 +745,7 @@ Tous les agents/développeurs disposent de :
 **Key Strengths :**
 - Zéro allocation dynamique — empreinte mémoire prévisible
 - IBus découple tous les modules — testabilité native
-- `SystemInit` unique point de câblage — architecture compréhensible d'un seul fichier
+- `cppMain.cpp` unique point de câblage — architecture compréhensible d'un seul fichier
 - Frontières strictes — aucune tâche ne peut involontairement bloquer une autre
 
 **Areas for Future Enhancement :**
@@ -727,21 +758,21 @@ Tous les agents/développeurs disposent de :
 - Suivre toutes les décisions architecturales exactement comme documentées
 - Utiliser `BusFormat::` pour toute publication IBus — jamais de `snprintf` inline
 - Déclarer stacks et priorités dans `Config.h` uniquement
-- Respecter les frontières : aucune tâche n'appelle directement une autre tâche
-- `SystemInit` est le seul endroit autorisé à instancier et câbler
+- Respecter les frontières : aucune tâche n'appelle directement une autre tâche (un appel direct vers un Service comme `ActuatorManager` reste autorisé)
+- `App/cppMain.cpp` est le seul endroit autorisé à instancier et câbler
 
 **First Implementation Priority :**
 1. Créer projet STM32CubeMX avec configuration hardware complète
 2. Implémenter `App/Config.h` et `App/Interfaces/`
-3. Implémenter `App/BusFormat.h/.cpp`
+3. Implémenter `App/Services/BusFormat.h/.cpp`
 4. Implémenter `ExternalComm` + `IBus`
-5. Implémenter `SystemInit::boot()` avec câblage statique complet
+5. Compléter le câblage statique dans `App/cppMain.cpp`
 
 ---
 
 ## Dependency Graph — OdoControl (zoom)
 
-Fonctionnement interne de la tâche OdoControl (200 Hz, priorité 5) : pipeline de contrôle, dépendances HAL, et sorties système.
+Fonctionnement interne de la tâche OdoControl (200 Hz, priorité 6) : pipeline de contrôle, dépendances HAL, et sorties système.
 
 ```dot
 digraph OdoControl {
@@ -765,7 +796,7 @@ digraph OdoControl {
 
     // ── Pipeline interne OdoControl ─────────────────────────────────────────
     subgraph cluster_odo {
-        label="OdoControl  [200 Hz — priorité 5]"
+        label="OdoControl  [200 Hz — priorité 6]"
         style=filled fillcolor="#fff5f5" color="#cc4400"
         fontname="Helvetica" fontsize=11
 
@@ -1068,5 +1099,93 @@ digraph TxPath {
     { rank=same; UTxISR;  USTxISR  }
     { rank=same; UART_HW; USB_HW   }
     { rank=same; DEBUG;   PC       }
+}
+```
+
+---
+
+## Dependency Graph — Sensor acquisition (SensorManager)
+
+Chaîne d'acquisition non-bloquante des capteurs. `cppMain.cpp` câble chaque capteur concret à sa source HAL (`Adc` via `IAdcHAL`, `InputCapture` via `IInputCaptureHAL`), puis regroupe les capteurs en `SensorGroup` cadencés indépendamment. `SensorManager` déclenche l'acquisition (`trigger()`), se met en sommeil jusqu'à la notification ISR (`doneFlag`), lit la valeur, met à jour la snapshot et notifie `MotionPlanner` en cas d'alarme.
+
+> **Légende :** rouge = chemin ISR → FreeRTOS (`xTaskNotifyFromISR`) · vert = périphérique HAL · bleu = tâche applicative · tirets gris = callbacks hardware · pointillés = lecture pull (Monitoring)
+
+```dot
+digraph SensorAcq {
+    rankdir=TB
+    nodesep=0.8
+    ranksep=1.1
+    fontname="Helvetica"
+    node [fontname="Helvetica" fontsize=10 style=filled shape=box fillcolor="#dde8f5" color="#6688aa" penwidth=1.5]
+    edge [fontname="Helvetica" fontsize=9 color="#444444"]
+
+    // ── Couche HAL ───────────────────────────────────────────────────────────
+    subgraph cluster_hal {
+        label="STM32 Hardware / HAL"
+        style=filled fillcolor="#eaf4ea" color="#336633"
+        fontname="Helvetica" fontsize=10
+
+        ADC_HW [label="ADC1 / ADC2 / ADC3\nconversion IT (EOC)" style=filled fillcolor="#c8e6c8"]
+        TIM_HW [label="TIM3 — 4 canaux\nInput Capture IT"   style=filled fillcolor="#c8e6c8"]
+    }
+
+    // ── Drivers (sources brutes) ─────────────────────────────────────────────
+    subgraph cluster_drv {
+        label="Drivers  (sources brutes)"
+        style=filled fillcolor="#fff8ee" color="#cc8800"
+        fontname="Helvetica" fontsize=10
+
+        Adc [label="Adc  (IAdcHAL)\n─────────────────\nstart() : HAL_ADC_Start_IT\ndispatchCallback (registre intrusif)\nxTaskNotifyFromISR(doneFlag)" fillcolor="#ffe8cc"]
+        IC  [label="InputCapture  (IInputCaptureHAL)\n─────────────────\ngetLastPulse() : largeur µs\ndispatchCallback (registre intrusif)" fillcolor="#ffe8cc"]
+    }
+
+    // ── Capteurs concrets (ISensor) ──────────────────────────────────────────
+    subgraph cluster_sensors {
+        label="Services/Sensors  (ISensor)"
+        style=filled fillcolor="#f0f0ff" color="#5555cc"
+        fontname="Helvetica" fontsize=10
+
+        Sensors [label="InternalTemperature · MotorCurrentSense · B5WLB2101  → IAdcHAL\nPololu5472  → IInputCaptureHAL\n─────────────────\ntrigger() · doneFlag() · isActive() · read() · isAlarm()" fillcolor="#d8d8ff"]
+    }
+
+    // ── Groupes cadencés ─────────────────────────────────────────────────────
+    Groups [label="SensorGroup[]  (câblés dans cppMain.cpp)\nTemp 1Hz · Current 5Hz · B5W 10Hz · Pololu 10Hz\nchaque groupe : { sensors, count, periodMs, nextDueMs }"
+            shape=cylinder fillcolor="#ffe0cc"]
+
+    // ── Tâche SensorManager ──────────────────────────────────────────────────
+    subgraph cluster_sm {
+        label="SensorManager  (Task — priorité 3)"
+        style=filled fillcolor="#e8f0ff" color="#334499"
+        fontname="Helvetica" fontsize=10
+
+        SMtask [label="task / pollDueGroups()\n─────────────────\npour chaque groupe dû :\n  trigger() → xTaskNotifyWait(doneFlag)\n  read() + isAlarm()\n  maj latestSnapshot (values/ts/alarmMask)\nsommeil dynamique jusqu'au prochain dû" fillcolor="#c0d0f0"]
+        Snap   [label="SensorSnapshot\nvalues[] · timestamps[] · alarmMask · count" shape=cylinder fillcolor="#b0c4e8"]
+    }
+
+    // ── Consommateurs ────────────────────────────────────────────────────────
+    MoPlan [label="MotionPlanner\nxTaskNotify (AlarmBits::SENSOR)" fillcolor="#fff3cd"]
+    Monitor[label="Monitoring\nlecture snapshot + détection stale" fillcolor="#fff3cd"]
+
+    // ── Arêtes ───────────────────────────────────────────────────────────────
+    ADC_HW -> Adc [label="HAL_ADC_ConvCpltCallback" style=dashed color="#888888" fontcolor="#888888"]
+    TIM_HW -> IC  [label="HAL_TIM_IC_CaptureCallback" style=dashed color="#888888" fontcolor="#888888"]
+
+    Adc -> Sensors [label="rawValue()" color="#cc8800" fontcolor="#cc8800"]
+    IC  -> Sensors [label="getLastPulse()" color="#cc8800" fontcolor="#cc8800"]
+
+    Sensors -> Groups [label="agrégés par fréquence" color="#5555cc" fontcolor="#5555cc"]
+    Groups  -> SMtask [label="poll si nextDueMs ≤ now" color="#334499" fontcolor="#334499" penwidth=2]
+
+    SMtask -> Sensors [label="trigger() / read()" color="#334499" fontcolor="#334499"]
+    Adc    -> SMtask  [label="xTaskNotifyFromISR(doneFlag)" color="#cc0000" fontcolor="#cc0000" penwidth=2]
+
+    SMtask -> Snap    [label="maj (writer)" color="#334499" fontcolor="#334499"]
+    SMtask -> MoPlan  [label="xTaskNotify (alarme)" color="#cc0000" fontcolor="#cc0000" penwidth=2]
+    Snap   -> Monitor [label="read (taskENTER_CRITICAL)" style=dotted color="#aaaaaa" fontcolor="#aaaaaa"]
+
+    // ── Mise en page ─────────────────────────────────────────────────────────
+    { rank=same; ADC_HW; TIM_HW }
+    { rank=same; Adc; IC }
+    { rank=same; MoPlan; Monitor }
 }
 ```

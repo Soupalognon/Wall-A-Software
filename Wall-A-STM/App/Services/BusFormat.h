@@ -20,6 +20,10 @@ public:
 	static const char* altSensorAlarm(uint32_t timestamp, const char *sensorName, float value);
 	static const char* hltSensors(uint32_t timestamp, uint8_t count, uint32_t alarmMask);
 	static const char* hltSensorValue(uint32_t timestamp, const char *sensorName, float value);
+	static const char* hltRtosHeap(uint32_t timestamp, uint32_t freeBytes, uint32_t minFreeBytes);
+	static const char* hltRtosTask(uint32_t timestamp, const char *taskName, uint16_t stackFreeWords);
+	static const char* altStackLow(const char *taskName, uint16_t stackFreeWords);
+	static const char* altHeapLow(uint32_t freeBytes);
 };
 
 #endif // APP_SERVICES_BUSFORMAT_H

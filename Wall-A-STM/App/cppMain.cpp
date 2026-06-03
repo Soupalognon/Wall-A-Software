@@ -15,6 +15,7 @@
 #include "Drivers/Encoder.h"
 #include "Drivers/InputCapture.h"
 #include "Drivers/Adc.h"
+#include "Drivers/KernelMonitor.h"
 
 #include "Services/Odometry.h"
 #include "Services/ActuatorManager.h"
@@ -151,7 +152,8 @@ extern "C" void cppMain(void) {
 	createTask(MotionPlanner::task, "MoPlan", Config::STACK_MOTION_PLANNER, &motionPlanner,
 		Config::PRIO_MOTION_PLANNER, nullptr);
 
-	static Monitoring monitoring { &extComm };
+	static KernelMonitor kernelMonitor;
+	static Monitoring monitoring { &extComm, &kernelMonitor };
 	createTask(Monitoring::task, "Monitor", Config::STACK_MONITORING, &monitoring,
 		Config::PRIO_MONITORING, nullptr);
 

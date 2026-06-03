@@ -3,8 +3,8 @@
 #include "Tasks/OdoControl.h"
 #include "Tasks/SensorManager.h"
 
-Monitoring::Monitoring(IBus *bus) :
-	_bus(bus) {
+Monitoring::Monitoring(IBus *bus, IKernelHAL *kernel) :
+	_bus(bus), _kernel(kernel) {
 }
 
 void Monitoring::task(void *param) {
@@ -73,5 +73,39 @@ void Monitoring::checkOnce() {
 		_bus->publish(Topic::HEALTH,
 			BusFormat::hltSensorValue(sensorSnap.timestamps[i], SensorManager::sensorNames[i],
 				sensorSnap.values[i]));
+	}
+
+	//-----------------------------------------------------------------
+	checkRtos(HAL_GetTick());
+}
+
+void Monitoring::checkRtos(uint32_t now) {
+	RtosTaskInfo info[Config::MAX_RTOS_TASKS] = { };
+	uint8_t n = _kernel->tasks(info, Config::MAX_RTOS_TASKS);
+
+	// Stack: alert any task whose free margin dropped below the threshold.
+	for (uint8_t i = 0; i < n; i++) {
+		if (info[i].stackFreeWords < Config::RTOS_STACK_WARN_WORDS)
+			_bus->publish(Topic::ALERT, BusFormat::altStackLow(info[i].name, info[i].stackFreeWords));
+	}
+
+	// Heap: current free fluctuates, so re-arm once it recovers above the threshold.
+	uint32_t heapFree = _kernel->heapFreeBytes();
+	if (heapFree < Config::RTOS_HEAP_WARN_BYTES) {
+		if (!_heapAlarmed) {
+			_heapAlarmed = true;
+			_bus->publish(Topic::ALERT, BusFormat::altHeapLow(heapFree));
+		}
+	} else {
+		_heapAlarmed = false;
+	}
+
+	// Throttled periodic HEALTH summary (~1 Hz at the 10 Hz task rate).
+	if (++_rtosDivCounter >= Config::RTOS_HEALTH_DIVIDER) {
+		_rtosDivCounter = 0;
+		_bus->publish(Topic::HEALTH,
+			BusFormat::hltRtosHeap(now, heapFree, _kernel->heapMinFreeBytes()));
+		for (uint8_t i = 0; i < n; i++)
+			_bus->publish(Topic::HEALTH, BusFormat::hltRtosTask(now, info[i].name, info[i].stackFreeWords));
 	}
 }

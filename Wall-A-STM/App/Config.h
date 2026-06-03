@@ -82,6 +82,12 @@ static constexpr float CURRENT_ALARM_MA = 4000.0f;
 // Monitoring stale threshold (ms)
 static constexpr uint32_t MONITORING_STALE_MS = 500;
 
+// FreeRTOS / kernel health monitoring
+static constexpr uint8_t MAX_RTOS_TASKS = 12;          // upper bound for uxTaskGetSystemState buffer (NFR-02)
+static constexpr uint16_t RTOS_STACK_WARN_WORDS = 48;  // ALERT if a task's free stack drops below this
+static constexpr uint32_t RTOS_HEAP_WARN_BYTES = 2048; // ALERT if free heap drops below this
+static constexpr uint8_t RTOS_HEALTH_DIVIDER = 10;     // emit RTOS HEALTH every N Monitoring cycles (~1 Hz @ 10 Hz)
+
 // Command watchdog - reset setpoint to 0 if no command received within timeout
 static constexpr bool CMD_WATCHDOG_ENABLED = true;
 static constexpr uint32_t CMD_WATCHDOG_TIMEOUT_MS = 1000;
@@ -92,7 +98,7 @@ static constexpr uint16_t STACK_MOTION_PLANNER = 256;
 static constexpr uint16_t STACK_SENSOR_MANAGER = 512;
 static constexpr uint16_t STACK_MONITORING = 1024;
 static constexpr uint16_t STACK_EXTCOMM_RX = 512;
-static constexpr uint16_t STACK_EXTCOMM_TX = 256;
+static constexpr uint16_t STACK_EXTCOMM_TX = 512;
 
 // FreeRTOS task priorities (higher number = higher priority)
 static constexpr UBaseType_t PRIO_ODO_CONTROL = 6;

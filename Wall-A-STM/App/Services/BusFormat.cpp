@@ -92,3 +92,31 @@ const char* BusFormat::hltSensorValue(uint32_t timestamp, const char *sensorName
 	snprintf(buf, sizeof(buf), "HLT SENSOR time:%ld %s:%.2f\r\n", timestamp, sensorName, value);
 	return buf;
 }
+
+const char* BusFormat::hltRtosHeap(uint32_t timestamp, uint32_t freeBytes, uint32_t minFreeBytes) {
+	static char buf[64];
+	snprintf(buf, sizeof(buf), "HLT RTOS_HEAP time:%lu FREE:%lu MIN:%lu\r\n",
+		static_cast<unsigned long>(timestamp), static_cast<unsigned long>(freeBytes),
+		static_cast<unsigned long>(minFreeBytes));
+	return buf;
+}
+
+const char* BusFormat::hltRtosTask(uint32_t timestamp, const char *taskName, uint16_t stackFreeWords) {
+	static char buf[64];
+	snprintf(buf, sizeof(buf), "HLT RTOS_TASK time:%lu %s_STACK:%u\r\n",
+		static_cast<unsigned long>(timestamp), taskName, static_cast<unsigned>(stackFreeWords));
+	return buf;
+}
+
+const char* BusFormat::altStackLow(const char *taskName, uint16_t stackFreeWords) {
+	static char buf[64];
+	snprintf(buf, sizeof(buf), "ALT STACK_LOW name:%s WORDS:%u\r\n", taskName,
+		static_cast<unsigned>(stackFreeWords));
+	return buf;
+}
+
+const char* BusFormat::altHeapLow(uint32_t freeBytes) {
+	static char buf[64];
+	snprintf(buf, sizeof(buf), "ALT HEAP_LOW FREE:%lu\r\n", static_cast<unsigned long>(freeBytes));
+	return buf;
+}
